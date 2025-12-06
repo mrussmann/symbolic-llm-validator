@@ -17,6 +17,7 @@
     --terminal-amber: #ffb000;
     --terminal-red: #ff3333;
     --terminal-cyan: #00ffff;
+    --terminal-magenta: #ff00ff;
 
     /* Text colors */
     --text-primary: var(--terminal-green);

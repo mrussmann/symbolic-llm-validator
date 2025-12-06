@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}Ontology Visualization - Logic-Guard-Layer{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/visualization.css">
+{% endblock %}
+
+{% block content %}
+<div class="terminal-section">
+    <div class="section-header">
+        <span class="prompt">&gt;</span> ONTOLOGY VISUALIZATION
+    </div>
+
+    <!-- Controls -->
+    <div class="viz-controls">
+        <div class="control-group">
+            <span class="control-label">View Mode:</span>
+            <button class="terminal-btn active" data-view="graph" id="btn-graph">[GRAPH]</button>
+            <button class="terminal-btn" data-view="tree" id="btn-tree">[TREE]</button>
+            <button class="terminal-btn" data-view="constraints" id="btn-constraints">[CONSTRAINTS]</button>
+        </div>
+        <div class="control-group">
+            <span class="control-label">Filter:</span>
+            <button class="terminal-btn filter-btn active" data-filter="all">[ALL]</button>
+            <button class="terminal-btn filter-btn" data-filter="component">[COMPONENTS]</button>
+            <button class="terminal-btn filter-btn" data-filter="event">[EVENTS]</button>
+        </div>
+        <div class="control-group">
+            <button class="terminal-btn" id="btn-reset">[RESET VIEW]</button>
+            <button class="terminal-btn" id="btn-center">[CENTER]</button>
+        </div>
+    </div>
+
+    <!-- Main visualization container -->
+    <div class="viz-container">
+        <!-- Graph/Tree View -->
+        <div class="viz-main" id="viz-main">
+            <svg id="ontology-svg"></svg>
+            <div id="tree-view" class="tree-view hidden"></div>
+            <div id="constraints-view" class="constraints-view hidden"></div>
+        </div>
+
+        <!-- Details Panel -->
+        <div class="viz-panel" id="details-panel">
+            <div class="panel-header">
+                <span class="prompt">&gt;</span> DETAILS
+            </div>
+            <div class="panel-content" id="panel-content">
+                <p class="hint-text">Click on a node to view details</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="viz-legend">
+        <div class="legend-title">Legend:</div>
+        <div class="legend-items">
+            <span class="legend-item">
+                <span class="legend-dot component"></span> Component
+            </span>
+            <span class="legend-item">
+                <span class="legend-dot event"></span> Event
+            </span>
+            <span class="legend-item">
+                <span class="legend-dot other"></span> Other
+            </span>
+            <span class="legend-item">
+                <span class="legend-line subclass"></span> is-a
+            </span>
+            <span class="legend-item">
+                <span class="legend-line property"></span> property
+            </span>
+        </div>
+    </div>
+</div>
+
+<!-- Loading overlay -->
+<div class="loading-overlay" id="loading">
+    <div class="loading-text">
+        <span class="prompt">&gt;</span> Loading ontology data<span class="loading-dots"></span>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="/static/js/ontology-viz.js"></script>
+{% endblock %}

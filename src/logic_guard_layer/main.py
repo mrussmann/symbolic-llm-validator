@@ -164,6 +164,159 @@ async def get_ontology():
     raise HTTPException(status_code=404, detail="Ontology schema not found")
 
 
+@app.get("/api/ontology/graph")
+async def get_ontology_graph():
+    """Get ontology data formatted for graph visualization."""
+    from logic_guard_layer.data import SCHEMA_PATH
+    import json
+
+    if not SCHEMA_PATH.exists():
+        raise HTTPException(status_code=404, detail="Ontology schema not found")
+
+    with open(SCHEMA_PATH) as f:
+        schema = json.load(f)
+
+    definitions = schema.get("definitions", {})
+    concepts = definitions.get("concepts", {})
+    properties = definitions.get("properties", {})
+    constraints_def = definitions.get("constraints", [])
+
+    # Build nodes
+    nodes = []
+    for name, data in concepts.items():
+        # Determine category
+        if name in ["Component", "RotatingComponent", "StaticComponent", "Motor",
+                    "ElectricMotor", "Pump", "HydraulicPump", "VacuumPump",
+                    "Valve", "ControlValve", "ShutoffValve", "Container",
+                    "Sensor", "PressureSensor", "TemperatureSensor",
+                    "Komponente", "RotierendeKomponente", "StatischeKomponente",
+                    "Elektromotor", "Hydraulikpumpe", "Vakuumpumpe",
+                    "Ventil", "Regelventil", "Absperrventil", "Behaelter",
+                    "Drucksensor", "Temperatursensor"]:
+            category = "component"
+        elif name in ["Event", "MaintenanceEvent", "FailureEvent", "MeasurementEvent",
+                      "Ereignis", "Wartungsereignis", "Ausfallereignis", "Messereignis"]:
+            category = "event"
+        else:
+            category = "other"
+
+        # Translate names to English
+        name_map = {
+            "Komponente": "Component",
+            "RotierendeKomponente": "RotatingComponent",
+            "StatischeKomponente": "StaticComponent",
+            "Elektromotor": "ElectricMotor",
+            "Pumpe": "Pump",
+            "Hydraulikpumpe": "HydraulicPump",
+            "Vakuumpumpe": "VacuumPump",
+            "Ventil": "Valve",
+            "Regelventil": "ControlValve",
+            "Absperrventil": "ShutoffValve",
+            "Behaelter": "Container",
+            "Drucksensor": "PressureSensor",
+            "Temperatursensor": "TemperatureSensor",
+            "Ereignis": "Event",
+            "Wartungsereignis": "MaintenanceEvent",
+            "Ausfallereignis": "FailureEvent",
+            "Messereignis": "MeasurementEvent",
+            "Anlage": "Plant",
+            "Techniker": "Technician",
+        }
+
+        display_name = name_map.get(name, name)
+        parent = data.get("parent")
+        parent_display = name_map.get(parent, parent) if parent else None
+
+        nodes.append({
+            "id": display_name,
+            "original_id": name,
+            "type": "class",
+            "category": category,
+            "description": data.get("description", ""),
+            "parent": parent_display,
+            "children": [name_map.get(c, c) for c in data.get("children", [])],
+        })
+
+    # Build edges (subclass relationships)
+    edges = []
+    for node in nodes:
+        if node["parent"]:
+            edges.append({
+                "source": node["id"],
+                "target": node["parent"],
+                "type": "subclass",
+                "label": "is-a",
+            })
+
+    # Add object property edges
+    obj_props = properties.get("object", {})
+    prop_name_map = {
+        "hatKomponente": "hasComponent",
+        "istTeilVon": "isPartOf",
+        "hatWartung": "hasMaintenance",
+        "durchgefuehrtVon": "performedBy",
+    }
+    for prop_id, prop_data in obj_props.items():
+        prop_name = prop_name_map.get(prop_id, prop_id)
+        domains = prop_data.get("domain", [])
+        ranges = prop_data.get("range", [])
+        for domain in domains:
+            for range_cls in ranges:
+                domain_name = name_map.get(domain, domain) if 'name_map' in dir() else domain
+                range_name = name_map.get(range_cls, range_cls) if 'name_map' in dir() else range_cls
+                edges.append({
+                    "source": domain_name,
+                    "target": range_name,
+                    "type": "object_property",
+                    "label": prop_name,
+                })
+
+    # Format datatype properties
+    dt_props = properties.get("datatype", {})
+    datatype_properties = []
+    dt_prop_name_map = {
+        "hatBetriebsstunden": "operatingHours",
+        "hatMaxLebensdauer": "maxLifespan",
+        "hatWartungsintervall": "maintenanceInterval",
+        "hatSeriennummer": "serialNumber",
+        "hatDruckBar": "pressureBar",
+        "hatTemperaturC": "temperatureC",
+        "hatDatum": "date",
+        "hatDrehzahl": "rpm",
+        "hatStatus": "status",
+    }
+    for prop_id, prop_data in dt_props.items():
+        prop_name = dt_prop_name_map.get(prop_id, prop_id)
+        datatype_properties.append({
+            "id": prop_name,
+            "original_id": prop_id,
+            "description": prop_data.get("description", ""),
+            "domain": prop_data.get("domain", []),
+            "range": prop_data.get("range", ""),
+            "constraints": prop_data.get("constraints", {}),
+        })
+
+    # Get constraints
+    constraints = get_all_constraints()
+    constraints_data = [
+        {
+            "id": c.id,
+            "name": c.name,
+            "type": c.type.value,
+            "expression": c.expression,
+            "description": c.description,
+        }
+        for c in constraints
+    ]
+
+    return {
+        "nodes": nodes,
+        "edges": edges,
+        "datatype_properties": datatype_properties,
+        "constraints": constraints_data,
+    }
+
+
 @app.get("/api/history")
 async def get_history(limit: int = 20):
     """Get validation history."""
@@ -243,6 +396,18 @@ async def ontology_page(request: Request):
             }
             for c in constraints
         ],
+    })
+
+
+@app.get("/visualization", response_class=HTMLResponse)
+async def visualization_page(request: Request):
+    """Render the ontology visualization page."""
+    if templates is None:
+        return HTMLResponse(content="Templates not found")
+
+    return templates.TemplateResponse("visualization.html", {
+        "request": request,
+        "version": __version__,
     })
 
 
