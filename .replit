@@ -1,5 +1,21 @@
+modules = ["nodejs-20", "python-3.11"]
 [agent]
 expertMode = true
 
 [nix]
 channel = "stable-25_05"
+
+[workflows]
+
+[[workflows.workflow]]
+name = "RunReload"
+mode = "sequential"
+author = 1054078
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python run.py --reload"
+
+[[ports]]
+localPort = 8000
+externalPort = 80

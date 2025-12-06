@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Logic-Guard-Layer - Home{% endblock %}
+
+{% block content %}
+<div class="terminal-container">
+    <div class="terminal-header">
+        <span class="prompt">&gt;</span> SYSTEM INITIALIZATION COMPLETE
+    </div>
+
+    <div class="terminal-content">
+        <div class="system-info">
+            <p><span class="label">STATUS:</span> <span class="success">ONLINE</span></p>
+            <p><span class="label">VERSION:</span> {{ version }}</p>
+            <p><span class="label">MODEL:</span> <span id="model-name">Loading...</span></p>
+            <p><span class="label">API:</span> <span id="api-status">Checking...</span></p>
+        </div>
+
+        <div class="terminal-divider"></div>
+
+        <div class="description">
+            <p class="typing-effect"><span class="prompt">&gt;</span> Logic-Guard-Layer is a neuro-symbolic validation system that combines LLM capabilities with ontology-based reasoning to detect and correct logical inconsistencies in technical maintenance documents.</p>
+        </div>
+
+        <div class="feature-list">
+            <h3><span class="prompt">&gt;</span> SYSTEM CAPABILITIES:</h3>
+            <ul>
+                <li><span class="bullet">[+]</span> Semantic parsing of technical text</li>
+                <li><span class="bullet">[+]</span> Ontology-based constraint validation</li>
+                <li><span class="bullet">[+]</span> Automatic error detection</li>
+                <li><span class="bullet">[+]</span> Self-correction loop with LLM</li>
+                <li><span class="bullet">[+]</span> Iteration tracking and history</li>
+            </ul>
+        </div>
+
+        <div class="action-buttons">
+            <a href="/validate" class="terminal-button primary">
+                <span class="button-icon">&gt;</span> START VALIDATION
+            </a>
+            <a href="/ontology" class="terminal-button">
+                <span class="button-icon">&gt;</span> VIEW CONSTRAINTS
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Fetch system info
+    fetch('/api/info')
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('model-name').textContent = data.model;
+            const apiStatus = document.getElementById('api-status');
+            if (data.api_configured) {
+                apiStatus.textContent = 'CONFIGURED';
+                apiStatus.className = 'success';
+            } else {
+                apiStatus.textContent = 'NOT CONFIGURED';
+                apiStatus.className = 'error';
+            }
+        })
+        .catch(() => {
+            document.getElementById('model-name').textContent = 'ERROR';
+            document.getElementById('api-status').textContent = 'ERROR';
+        });
+</script>
+{% endblock %}

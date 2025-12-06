@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}500 - Server Error{% endblock %}
+
+{% block content %}
+<div class="terminal-container error-page">
+    <div class="terminal-header">
+        <span class="prompt">&gt;</span> ERROR 500
+    </div>
+
+    <div class="terminal-content">
+        <div class="error-ascii">
+<pre>
+  ____   ___   ___
+ | ___| / _ \ / _ \
+ |___ \| | | | | | |
+  ___) | |_| | |_| |
+ |____/ \___/ \___/
+
+  SYSTEM ERROR
+</pre>
+        </div>
+
+        <div class="error-message">
+            <p><span class="prompt">&gt;</span> An internal server error has occurred.</p>
+            <p><span class="prompt">&gt;</span> The system administrator has been notified.</p>
+        </div>
+
+        <div class="action-buttons">
+            <a href="/" class="terminal-button primary">
+                <span class="button-icon">&gt;</span> RETURN TO HOME
+            </a>
+            <a href="/validate" class="terminal-button">
+                <span class="button-icon">&gt;</span> TRY AGAIN
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,7 @@
+include README.md
+include LICENSE
+include .env.example
+
+recursive-include src/logic_guard_layer/data *.owl *.json
+recursive-include src/logic_guard_layer/web/templates *.html
+recursive-include src/logic_guard_layer/web/static *.css *.js

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}404 - Not Found{% endblock %}
+
+{% block content %}
+<div class="terminal-container error-page">
+    <div class="terminal-header">
+        <span class="prompt">&gt;</span> ERROR 404
+    </div>
+
+    <div class="terminal-content">
+        <div class="error-ascii">
+<pre>
+  _  _    ___  _  _
+ | || |  / _ \| || |
+ | || |_| | | | || |_
+ |__   _| | | |__   _|
+    | | | |_| |  | |
+    |_|  \___/   |_|
+
+  NOT FOUND
+</pre>
+        </div>
+
+        <div class="error-message">
+            <p><span class="prompt">&gt;</span> The requested resource could not be found on this server.</p>
+            <p><span class="prompt">&gt;</span> Please check the URL and try again.</p>
+        </div>
+
+        <div class="action-buttons">
+            <a href="/" class="terminal-button primary">
+                <span class="button-icon">&gt;</span> RETURN TO HOME
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

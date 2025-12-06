@@ -1,0 +1,370 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Maintenance Domain Schema",
+  "description": "JSON Schema representation of the maintenance ontology for Logic-Guard-Layer",
+  "version": "1.0.0",
+
+  "definitions": {
+    "concepts": {
+      "Komponente": {
+        "description": "Base class for all technical components",
+        "parent": null,
+        "children": ["RotierendeKomponente", "StatischeKomponente", "Sensor"]
+      },
+      "RotierendeKomponente": {
+        "description": "Rotating components",
+        "parent": "Komponente",
+        "children": ["Motor", "Pumpe"]
+      },
+      "Motor": {
+        "description": "Motor/Engine",
+        "parent": "RotierendeKomponente",
+        "children": ["Elektromotor"]
+      },
+      "Elektromotor": {
+        "description": "Electric motor",
+        "parent": "Motor",
+        "children": []
+      },
+      "Pumpe": {
+        "description": "Pump",
+        "parent": "RotierendeKomponente",
+        "children": ["Hydraulikpumpe", "Vakuumpumpe"]
+      },
+      "Hydraulikpumpe": {
+        "description": "Hydraulic pump",
+        "parent": "Pumpe",
+        "children": []
+      },
+      "Vakuumpumpe": {
+        "description": "Vacuum pump",
+        "parent": "Pumpe",
+        "children": []
+      },
+      "StatischeKomponente": {
+        "description": "Static components",
+        "parent": "Komponente",
+        "children": ["Ventil", "Behaelter"]
+      },
+      "Ventil": {
+        "description": "Valve",
+        "parent": "StatischeKomponente",
+        "children": ["Regelventil", "Absperrventil"]
+      },
+      "Regelventil": {
+        "description": "Control valve",
+        "parent": "Ventil",
+        "children": []
+      },
+      "Absperrventil": {
+        "description": "Shutoff valve",
+        "parent": "Ventil",
+        "children": []
+      },
+      "Behaelter": {
+        "description": "Container/Tank",
+        "parent": "StatischeKomponente",
+        "children": []
+      },
+      "Sensor": {
+        "description": "Sensor",
+        "parent": "Komponente",
+        "children": ["Drucksensor", "Temperatursensor"]
+      },
+      "Drucksensor": {
+        "description": "Pressure sensor",
+        "parent": "Sensor",
+        "children": []
+      },
+      "Temperatursensor": {
+        "description": "Temperature sensor",
+        "parent": "Sensor",
+        "children": []
+      },
+      "Ereignis": {
+        "description": "Base class for events",
+        "parent": null,
+        "children": ["Wartungsereignis", "Ausfallereignis", "Messereignis"]
+      },
+      "Wartungsereignis": {
+        "description": "Maintenance event",
+        "parent": "Ereignis",
+        "children": []
+      },
+      "Ausfallereignis": {
+        "description": "Failure event",
+        "parent": "Ereignis",
+        "children": []
+      },
+      "Messereignis": {
+        "description": "Measurement event",
+        "parent": "Ereignis",
+        "children": []
+      },
+      "Anlage": {
+        "description": "Plant/System",
+        "parent": null,
+        "children": []
+      },
+      "Techniker": {
+        "description": "Technician",
+        "parent": null,
+        "children": []
+      }
+    },
+
+    "properties": {
+      "datatype": {
+        "hatBetriebsstunden": {
+          "description": "Operating hours (must be >= 0)",
+          "domain": ["Komponente"],
+          "range": "integer",
+          "constraints": {
+            "minimum": 0
+          }
+        },
+        "hatMaxLebensdauer": {
+          "description": "Maximum lifespan in hours (must be > 0)",
+          "domain": ["Komponente"],
+          "range": "integer",
+          "constraints": {
+            "exclusiveMinimum": 0
+          }
+        },
+        "hatWartungsintervall": {
+          "description": "Maintenance interval in hours (must be > 0, <= max lifespan)",
+          "domain": ["Komponente"],
+          "range": "integer",
+          "constraints": {
+            "exclusiveMinimum": 0
+          }
+        },
+        "hatSeriennummer": {
+          "description": "Serial number",
+          "domain": ["Komponente"],
+          "range": "string"
+        },
+        "hatDruckBar": {
+          "description": "Pressure in bar (0-350 for standard hydraulics)",
+          "domain": ["Komponente"],
+          "range": "float",
+          "constraints": {
+            "minimum": 0,
+            "maximum": 350
+          }
+        },
+        "hatTemperaturC": {
+          "description": "Temperature in Celsius (-40 to 150)",
+          "domain": ["Komponente"],
+          "range": "float",
+          "constraints": {
+            "minimum": -40,
+            "maximum": 150
+          }
+        },
+        "hatDatum": {
+          "description": "Date of event",
+          "domain": ["Ereignis"],
+          "range": "date"
+        },
+        "hatDrehzahl": {
+          "description": "Rotation speed in RPM (0-10000)",
+          "domain": ["RotierendeKomponente"],
+          "range": "integer",
+          "constraints": {
+            "minimum": 0,
+            "maximum": 10000
+          }
+        },
+        "hatStatus": {
+          "description": "Status (aktiv, defekt, wartung)",
+          "domain": ["Komponente"],
+          "range": "string",
+          "enum": ["aktiv", "defekt", "wartung"]
+        }
+      },
+      "object": {
+        "hatKomponente": {
+          "description": "Plant has component",
+          "domain": ["Anlage"],
+          "range": ["Komponente"]
+        },
+        "istTeilVon": {
+          "description": "Component is part of plant",
+          "domain": ["Komponente"],
+          "range": ["Anlage"],
+          "inverseOf": "hatKomponente"
+        },
+        "hatWartung": {
+          "description": "Component has maintenance",
+          "domain": ["Komponente"],
+          "range": ["Wartungsereignis"]
+        },
+        "durchgefuehrtVon": {
+          "description": "Performed by technician",
+          "domain": ["Wartungsereignis"],
+          "range": ["Techniker"]
+        }
+      }
+    },
+
+    "constraints": [
+      {
+        "id": "C1",
+        "name": "Betriebsstunden nicht negativ",
+        "type": "range",
+        "expression": "betriebsstunden >= 0",
+        "description": "Operating hours must be non-negative"
+      },
+      {
+        "id": "C2",
+        "name": "Maximale Lebensdauer positiv",
+        "type": "range",
+        "expression": "max_lebensdauer > 0",
+        "description": "Maximum lifespan must be positive"
+      },
+      {
+        "id": "C3",
+        "name": "Wartungsintervall positiv",
+        "type": "range",
+        "expression": "wartungsintervall > 0",
+        "description": "Maintenance interval must be positive"
+      },
+      {
+        "id": "C4",
+        "name": "Wartungsintervall <= Lebensdauer",
+        "type": "relational",
+        "expression": "wartungsintervall <= max_lebensdauer",
+        "description": "Maintenance interval cannot exceed max lifespan"
+      },
+      {
+        "id": "C5",
+        "name": "Betriebsstunden <= Lebensdauer",
+        "type": "relational",
+        "expression": "betriebsstunden <= max_lebensdauer",
+        "description": "Operating hours cannot exceed max lifespan"
+      },
+      {
+        "id": "C6",
+        "name": "Druckbereich Hydraulik",
+        "type": "physical",
+        "expression": "0 <= druck_bar <= 350",
+        "description": "Pressure must be within 0-350 bar for standard hydraulics"
+      },
+      {
+        "id": "C7",
+        "name": "Temperaturbereich",
+        "type": "physical",
+        "expression": "-40 <= temperatur_c <= 150",
+        "description": "Temperature must be within -40 to 150°C"
+      },
+      {
+        "id": "C8",
+        "name": "Drehzahlbereich",
+        "type": "physical",
+        "expression": "0 <= drehzahl <= 10000",
+        "description": "RPM must be within 0-10000"
+      }
+    ]
+  },
+
+  "type": "object",
+  "properties": {
+    "komponente": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Component identifier"
+        },
+        "typ": {
+          "type": "string",
+          "enum": ["Motor", "Elektromotor", "Pumpe", "Hydraulikpumpe", "Vakuumpumpe", "Ventil", "Regelventil", "Absperrventil", "Behaelter", "Sensor", "Drucksensor", "Temperatursensor"],
+          "description": "Component type"
+        },
+        "betriebsstunden": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Operating hours"
+        },
+        "max_lebensdauer": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "description": "Maximum lifespan in hours"
+        },
+        "wartungsintervall": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "description": "Maintenance interval in hours"
+        },
+        "seriennummer": {
+          "type": "string",
+          "description": "Serial number"
+        },
+        "druck_bar": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 350,
+          "description": "Pressure in bar"
+        },
+        "temperatur_c": {
+          "type": "number",
+          "minimum": -40,
+          "maximum": 150,
+          "description": "Temperature in Celsius"
+        },
+        "drehzahl": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000,
+          "description": "RPM"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["aktiv", "defekt", "wartung"],
+          "description": "Component status"
+        }
+      },
+      "required": ["name", "typ"]
+    },
+    "wartung": {
+      "type": "object",
+      "properties": {
+        "datum": {
+          "type": "string",
+          "format": "date",
+          "description": "Maintenance date"
+        },
+        "techniker": {
+          "type": "string",
+          "description": "Technician name"
+        },
+        "beschreibung": {
+          "type": "string",
+          "description": "Description of work"
+        }
+      }
+    },
+    "messwerte": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "typ": {
+            "type": "string",
+            "description": "Measurement type"
+          },
+          "wert": {
+            "type": "number",
+            "description": "Measured value"
+          },
+          "einheit": {
+            "type": "string",
+            "description": "Unit of measurement"
+          }
+        },
+        "required": ["typ", "wert", "einheit"]
+      }
+    }
+  }
+}

@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}Logic-Guard-Layer - Ontology{% endblock %}
+
+{% block content %}
+<div class="terminal-container">
+    <div class="terminal-header">
+        <span class="prompt">&gt;</span> MAINTENANCE DOMAIN ONTOLOGY
+    </div>
+
+    <div class="terminal-content">
+        <div class="ontology-intro">
+            <p><span class="prompt">&gt;</span> This system uses a formal ontology to define constraints for technical maintenance documents. The ontology includes component types, properties, and validation rules.</p>
+        </div>
+
+        <div class="terminal-divider"></div>
+
+        <h3><span class="prompt">&gt;</span> ACTIVE CONSTRAINTS:</h3>
+
+        <div class="constraints-list">
+            {% for c in constraints %}
+            <div class="constraint-card">
+                <div class="constraint-header">
+                    <span class="constraint-id">[{{ c.id }}]</span>
+                    <span class="constraint-name">{{ c.name }}</span>
+                    <span class="constraint-type type-{{ c.type }}">{{ c.type }}</span>
+                </div>
+                <div class="constraint-expression">
+                    <code>{{ c.expression }}</code>
+                </div>
+                <div class="constraint-description">
+                    {{ c.description }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="terminal-divider"></div>
+
+        <h3><span class="prompt">&gt;</span> COMPONENT HIERARCHY:</h3>
+
+        <div class="ontology-tree">
+            <pre>
+Component
+├── RotatingComponent
+│   ├── Motor
+│   │   └── ElectricMotor
+│   └── Pump
+│       ├── HydraulicPump
+│       └── VacuumPump
+├── StaticComponent
+│   ├── Valve
+│   │   ├── ControlValve
+│   │   └── ShutoffValve
+│   └── Container
+└── Sensor
+    ├── PressureSensor
+    └── TemperatureSensor
+            </pre>
+        </div>
+
+        <div class="terminal-divider"></div>
+
+        <h3><span class="prompt">&gt;</span> PROPERTY RANGES:</h3>
+
+        <div class="properties-table">
+            <table class="terminal-table">
+                <thead>
+                    <tr>
+                        <th>PROPERTY</th>
+                        <th>TYPE</th>
+                        <th>RANGE</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>operating_hours</td>
+                        <td>integer</td>
+                        <td>&gt;= 0</td>
+                    </tr>
+                    <tr>
+                        <td>max_lifespan</td>
+                        <td>integer</td>
+                        <td>&gt; 0</td>
+                    </tr>
+                    <tr>
+                        <td>maintenance_interval</td>
+                        <td>integer</td>
+                        <td>&gt; 0, &lt;= max_lifespan</td>
+                    </tr>
+                    <tr>
+                        <td>pressure_bar</td>
+                        <td>float</td>
+                        <td>0 - 350</td>
+                    </tr>
+                    <tr>
+                        <td>temperature_c</td>
+                        <td>float</td>
+                        <td>-40 - 150</td>
+                    </tr>
+                    <tr>
+                        <td>rpm</td>
+                        <td>integer</td>
+                        <td>0 - 10000</td>
+                    </tr>
+                    <tr>
+                        <td>status</td>
+                        <td>enum</td>
+                        <td>active, defective, maintenance</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

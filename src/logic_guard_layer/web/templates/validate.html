@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block title %}Logic-Guard-Layer - Validate{% endblock %}
+
+{% block content %}
+<div class="terminal-container">
+    <div class="terminal-header">
+        <span class="prompt">&gt;</span> TEXT VALIDATION MODULE
+    </div>
+
+    <div class="terminal-content">
+        <form id="validation-form" class="validation-form">
+            <div class="form-group">
+                <label for="input-text"><span class="prompt">&gt;</span> INPUT TEXT:</label>
+                <textarea id="input-text" name="text" rows="8" class="terminal-textarea"
+                    placeholder="Enter technical maintenance text here...&#10;&#10;Example: Motor M1 has 15,000 operating hours with a maximum lifespan of 20,000 hours. The pressure is 250 bar."></textarea>
+            </div>
+
+            <div class="form-options">
+                <label class="terminal-checkbox">
+                    <input type="checkbox" id="auto-correct" name="auto_correct" checked>
+                    <span class="checkmark"></span>
+                    Auto-correct errors
+                </label>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="terminal-button primary" id="submit-btn">
+                    <span class="button-icon">&gt;</span> EXECUTE VALIDATION
+                </button>
+                <button type="button" class="terminal-button" id="clear-btn">
+                    <span class="button-icon">&gt;</span> CLEAR
+                </button>
+            </div>
+        </form>
+
+        <!-- Loading indicator -->
+        <div id="loading" class="loading hidden">
+            <div class="loading-spinner"></div>
+            <p>Processing... <span class="blink">_</span></p>
+        </div>
+
+        <!-- Results section -->
+        <div id="results" class="results-section hidden">
+            <div class="terminal-divider"></div>
+
+            <div class="result-header">
+                <span class="prompt">&gt;</span> VALIDATION RESULT:
+            </div>
+
+            <div id="result-status" class="result-status">
+                <!-- Status will be inserted here -->
+            </div>
+
+            <!-- Violations -->
+            <div id="violations-container" class="violations-container hidden">
+                <h4><span class="prompt">&gt;</span> CONSTRAINT VIOLATIONS:</h4>
+                <div id="violations-list" class="violations-list">
+                    <!-- Violations will be inserted here -->
+                </div>
+            </div>
+
+            <!-- Corrected text -->
+            <div id="corrected-container" class="corrected-container hidden">
+                <h4><span class="prompt">&gt;</span> CORRECTED TEXT:</h4>
+                <div id="corrected-text" class="corrected-text">
+                    <!-- Corrected text will be inserted here -->
+                </div>
+            </div>
+
+            <!-- Metrics -->
+            <div class="result-metrics">
+                <span><span class="label">Iterations:</span> <span id="iterations">-</span></span>
+                <span><span class="label">Processing time:</span> <span id="processing-time">-</span>ms</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('validation-form');
+    const inputText = document.getElementById('input-text');
+    const submitBtn = document.getElementById('submit-btn');
+    const clearBtn = document.getElementById('clear-btn');
+    const loading = document.getElementById('loading');
+    const results = document.getElementById('results');
+    const resultStatus = document.getElementById('result-status');
+    const violationsContainer = document.getElementById('violations-container');
+    const violationsList = document.getElementById('violations-list');
+    const correctedContainer = document.getElementById('corrected-container');
+    const correctedText = document.getElementById('corrected-text');
+    const iterationsEl = document.getElementById('iterations');
+    const processingTimeEl = document.getElementById('processing-time');
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const text = inputText.value.trim();
+        if (!text) {
+            alert('Please enter some text to validate.');
+            return;
+        }
+
+        // Show loading
+        submitBtn.disabled = true;
+        loading.classList.remove('hidden');
+        results.classList.add('hidden');
+
+        try {
+            const response = await fetch('/api/validate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    text: text,
+                    auto_correct: document.getElementById('auto-correct').checked,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.detail || 'Validation failed');
+            }
+
+            // Display results
+            displayResults(data);
+
+        } catch (error) {
+            resultStatus.innerHTML = `<div class="status-box error">[ERROR] ${error.message}</div>`;
+            results.classList.remove('hidden');
+        } finally {
+            submitBtn.disabled = false;
+            loading.classList.add('hidden');
+        }
+    });
+
+    clearBtn.addEventListener('click', function() {
+        inputText.value = '';
+        results.classList.add('hidden');
+    });
+
+    function displayResults(data) {
+        const result = data.result;
+
+        // Status
+        if (result.is_valid) {
+            resultStatus.innerHTML = '<div class="status-box success">[OK] TEXT IS CONSISTENT - ALL CONSTRAINTS SATISFIED</div>';
+        } else {
+            resultStatus.innerHTML = `<div class="status-box error">[ERROR] FOUND ${result.violations.length} CONSTRAINT VIOLATION(S)</div>`;
+        }
+
+        // Violations
+        if (result.violations && result.violations.length > 0) {
+            violationsList.innerHTML = result.violations.map(v => `
+                <div class="violation-card">
+                    <div class="violation-type">[${v.type}]</div>
+                    <div class="violation-message">${v.message}</div>
+                    <div class="violation-details">
+                        <span>Constraint: ${v.constraint}</span>
+                        ${v.property_name ? `<span>Property: ${v.property_name}</span>` : ''}
+                        ${v.actual_value !== null ? `<span>Actual: ${v.actual_value}</span>` : ''}
+                        ${v.expected_value ? `<span>Expected: ${v.expected_value}</span>` : ''}
+                    </div>
+                </div>
+            `).join('');
+            violationsContainer.classList.remove('hidden');
+        } else {
+            violationsContainer.classList.add('hidden');
+        }
+
+        // Corrected text
+        if (result.corrected_text) {
+            correctedText.textContent = result.corrected_text;
+            correctedContainer.classList.remove('hidden');
+        } else {
+            correctedContainer.classList.add('hidden');
+        }
+
+        // Metrics
+        iterationsEl.textContent = result.iterations || 1;
+        processingTimeEl.textContent = data.processing_time_ms.toFixed(2);
+
+        results.classList.remove('hidden');
+    }
+});
+</script>
+{% endblock %}

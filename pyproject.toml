@@ -1,0 +1,87 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "logic-guard-layer"
+version = "1.0.0"
+description = "Neuro-symbolic hybrid architecture for validating LLM outputs"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.11"
+authors = [
+    {name = "Logic-Guard-Layer Team"}
+]
+keywords = ["llm", "validation", "ontology", "neuro-symbolic", "ai", "openrouter"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+dependencies = [
+    "fastapi>=0.100.0",
+    "uvicorn[standard]>=0.23.0",
+    "owlready2>=0.40",
+    "httpx>=0.24.0",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    "python-multipart>=0.0.6",
+    "jinja2>=3.1.0",
+    "aiofiles>=23.0.0",
+    "python-dotenv>=1.0.0",
+    "click>=8.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
+]
+
+[project.scripts]
+logic-guard = "logic_guard_layer.cli:main"
+lgl = "logic_guard_layer.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/logic-guard-layer/logic-guard-layer"
+Documentation = "https://github.com/logic-guard-layer/logic-guard-layer#readme"
+Repository = "https://github.com/logic-guard-layer/logic-guard-layer"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+logic_guard_layer = [
+    "data/*.owl",
+    "data/*.json",
+    "web/templates/*.html",
+    "web/templates/**/*.html",
+    "web/static/css/*.css",
+    "web/static/js/*.js",
+]
+
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+
+[tool.ruff]
+line-length = 88
+select = ["E", "F", "I", "N", "W"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

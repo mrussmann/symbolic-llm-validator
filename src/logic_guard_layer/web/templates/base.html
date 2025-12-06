@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Logic-Guard-Layer{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/terminal.css">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Scanline overlay -->
+    <div class="scanlines"></div>
+
+    <!-- CRT screen effect container -->
+    <div class="crt-screen">
+        <!-- Navigation -->
+        <nav class="terminal-nav">
+            <div class="nav-brand">
+                <span class="prompt">&gt;</span> LOGIC-GUARD-LAYER <span class="version">v{{ version }}</span>
+            </div>
+            <div class="nav-links">
+                <a href="/" class="nav-link {% if request.url.path == '/' %}active{% endif %}">[HOME]</a>
+                <a href="/validate" class="nav-link {% if request.url.path == '/validate' %}active{% endif %}">[VALIDATE]</a>
+                <a href="/history" class="nav-link {% if request.url.path == '/history' %}active{% endif %}">[HISTORY]</a>
+                <a href="/ontology" class="nav-link {% if request.url.path == '/ontology' %}active{% endif %}">[ONTOLOGY]</a>
+            </div>
+        </nav>
+
+        <!-- Main content -->
+        <main class="terminal-main">
+            {% block content %}{% endblock %}
+        </main>
+
+        <!-- Footer -->
+        <footer class="terminal-footer">
+            <div class="footer-content">
+                <span class="blink">_</span> NEURO-SYMBOLIC VALIDATION SYSTEM <span class="separator">|</span>
+                <span id="clock"></span>
+            </div>
+        </footer>
+    </div>
+
+    <script src="/static/js/terminal.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

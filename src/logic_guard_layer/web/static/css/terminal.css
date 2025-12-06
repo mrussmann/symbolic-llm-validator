@@ -1,0 +1,810 @@
+/* Logic-Guard-Layer Terminal Theme
+   Retro CRT terminal aesthetic with green phosphor display
+*/
+
+/* ============================================================================
+   CSS Variables
+   ============================================================================ */
+
+:root {
+    /* Terminal colors - Green phosphor CRT */
+    --terminal-bg: #0a0a0a;
+    --terminal-bg-alt: #0f0f0f;
+    --terminal-green: #00ff41;
+    --terminal-green-dim: #00cc33;
+    --terminal-green-bright: #33ff66;
+    --terminal-green-glow: rgba(0, 255, 65, 0.3);
+    --terminal-amber: #ffb000;
+    --terminal-red: #ff3333;
+    --terminal-cyan: #00ffff;
+
+    /* Text colors */
+    --text-primary: var(--terminal-green);
+    --text-secondary: var(--terminal-green-dim);
+    --text-muted: #006622;
+
+    /* UI colors */
+    --border-color: var(--terminal-green-dim);
+    --hover-bg: rgba(0, 255, 65, 0.1);
+    --active-bg: rgba(0, 255, 65, 0.2);
+
+    /* Fonts */
+    --font-terminal: 'VT323', 'Share Tech Mono', 'Courier New', monospace;
+    --font-size-base: 18px;
+    --font-size-lg: 22px;
+    --font-size-sm: 16px;
+
+    /* Spacing */
+    --spacing-xs: 0.25rem;
+    --spacing-sm: 0.5rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+
+    /* Effects */
+    --glow-text: 0 0 10px var(--terminal-green-glow);
+    --glow-strong: 0 0 20px var(--terminal-green-glow), 0 0 40px var(--terminal-green-glow);
+}
+
+/* ============================================================================
+   Base Styles
+   ============================================================================ */
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html, body {
+    height: 100%;
+    overflow-x: hidden;
+}
+
+body {
+    font-family: var(--font-terminal);
+    font-size: var(--font-size-base);
+    background-color: var(--terminal-bg);
+    color: var(--text-primary);
+    line-height: 1.5;
+    text-shadow: var(--glow-text);
+}
+
+/* ============================================================================
+   CRT Screen Effects
+   ============================================================================ */
+
+.crt-screen {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    animation: flicker 0.15s infinite;
+}
+
+@keyframes flicker {
+    0% { opacity: 0.97; }
+    50% { opacity: 1; }
+    100% { opacity: 0.98; }
+}
+
+/* Scanlines overlay */
+.scanlines {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1000;
+    background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.15),
+        rgba(0, 0, 0, 0.15) 1px,
+        transparent 1px,
+        transparent 2px
+    );
+}
+
+/* ============================================================================
+   Navigation
+   ============================================================================ */
+
+.terminal-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--terminal-bg-alt);
+}
+
+.nav-brand {
+    font-size: var(--font-size-lg);
+    font-weight: bold;
+}
+
+.nav-brand .prompt {
+    color: var(--terminal-green-bright);
+}
+
+.nav-brand .version {
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
+}
+
+.nav-links {
+    display: flex;
+    gap: var(--spacing-md);
+}
+
+.nav-link {
+    color: var(--text-secondary);
+    text-decoration: none;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    transition: all 0.2s;
+}
+
+.nav-link:hover {
+    color: var(--terminal-green-bright);
+    text-shadow: var(--glow-strong);
+}
+
+.nav-link.active {
+    color: var(--terminal-green-bright);
+    background-color: var(--active-bg);
+}
+
+/* ============================================================================
+   Main Content
+   ============================================================================ */
+
+.terminal-main {
+    flex: 1;
+    padding: var(--spacing-lg);
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.terminal-container {
+    background-color: var(--terminal-bg-alt);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.terminal-header {
+    background-color: var(--terminal-bg);
+    padding: var(--spacing-md);
+    border-bottom: 1px solid var(--border-color);
+    font-size: var(--font-size-lg);
+}
+
+.terminal-content {
+    padding: var(--spacing-lg);
+}
+
+.terminal-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border-color), transparent);
+    margin: var(--spacing-lg) 0;
+}
+
+/* ============================================================================
+   Typography
+   ============================================================================ */
+
+.prompt {
+    color: var(--terminal-green-bright);
+    margin-right: var(--spacing-xs);
+}
+
+.label {
+    color: var(--terminal-cyan);
+}
+
+.success {
+    color: var(--terminal-green-bright);
+}
+
+.error {
+    color: var(--terminal-red);
+}
+
+.blink {
+    animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+    50% { opacity: 0; }
+}
+
+h3, h4 {
+    margin-bottom: var(--spacing-md);
+    color: var(--text-primary);
+}
+
+p {
+    margin-bottom: var(--spacing-sm);
+}
+
+pre {
+    font-family: var(--font-terminal);
+    overflow-x: auto;
+}
+
+code {
+    font-family: var(--font-terminal);
+    background-color: var(--terminal-bg);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: 2px;
+}
+
+/* ============================================================================
+   ASCII Art
+   ============================================================================ */
+
+.ascii-art {
+    text-align: center;
+    margin: var(--spacing-lg) 0;
+    color: var(--terminal-green-bright);
+    text-shadow: var(--glow-strong);
+}
+
+.ascii-art pre {
+    display: inline-block;
+    text-align: left;
+    font-size: 14px;
+    line-height: 1.2;
+}
+
+/* ============================================================================
+   Buttons
+   ============================================================================ */
+
+.terminal-button {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-lg);
+    background-color: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    font-family: var(--font-terminal);
+    font-size: var(--font-size-base);
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.terminal-button:hover {
+    background-color: var(--hover-bg);
+    border-color: var(--terminal-green-bright);
+    text-shadow: var(--glow-strong);
+}
+
+.terminal-button.primary {
+    background-color: var(--active-bg);
+    border-color: var(--terminal-green-bright);
+}
+
+.terminal-button.primary:hover {
+    background-color: var(--terminal-green);
+    color: var(--terminal-bg);
+    text-shadow: none;
+}
+
+.terminal-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.button-icon {
+    color: var(--terminal-green-bright);
+}
+
+.action-buttons {
+    display: flex;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-lg);
+    flex-wrap: wrap;
+}
+
+/* ============================================================================
+   Forms
+   ============================================================================ */
+
+.form-group {
+    margin-bottom: var(--spacing-lg);
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: var(--spacing-sm);
+}
+
+.terminal-textarea {
+    width: 100%;
+    padding: var(--spacing-md);
+    background-color: var(--terminal-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    font-family: var(--font-terminal);
+    font-size: var(--font-size-base);
+    resize: vertical;
+    min-height: 200px;
+}
+
+.terminal-textarea:focus {
+    outline: none;
+    border-color: var(--terminal-green-bright);
+    box-shadow: 0 0 10px var(--terminal-green-glow);
+}
+
+.terminal-textarea::placeholder {
+    color: var(--text-muted);
+}
+
+.form-options {
+    margin-bottom: var(--spacing-lg);
+}
+
+.terminal-checkbox {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    cursor: pointer;
+}
+
+.terminal-checkbox input[type="checkbox"] {
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border: 1px solid var(--border-color);
+    background-color: var(--terminal-bg);
+    cursor: pointer;
+}
+
+.terminal-checkbox input[type="checkbox"]:checked {
+    background-color: var(--terminal-green);
+    border-color: var(--terminal-green-bright);
+}
+
+.terminal-checkbox input[type="checkbox"]:checked::after {
+    content: '✓';
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: var(--terminal-bg);
+    font-size: 14px;
+}
+
+.form-actions {
+    display: flex;
+    gap: var(--spacing-md);
+}
+
+/* ============================================================================
+   Loading
+   ============================================================================ */
+
+.loading {
+    text-align: center;
+    padding: var(--spacing-xl);
+}
+
+.loading.hidden {
+    display: none;
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 2px solid var(--text-muted);
+    border-top-color: var(--terminal-green-bright);
+    border-radius: 50%;
+    margin: 0 auto var(--spacing-md);
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.loading-placeholder {
+    text-align: center;
+    padding: var(--spacing-xl);
+    color: var(--text-secondary);
+}
+
+/* ============================================================================
+   Results
+   ============================================================================ */
+
+.results-section.hidden {
+    display: none;
+}
+
+.result-header {
+    font-size: var(--font-size-lg);
+    margin-bottom: var(--spacing-md);
+}
+
+.status-box {
+    padding: var(--spacing-md);
+    border: 1px solid;
+    margin-bottom: var(--spacing-lg);
+}
+
+.status-box.success {
+    border-color: var(--terminal-green);
+    background-color: rgba(0, 255, 65, 0.1);
+}
+
+.status-box.error {
+    border-color: var(--terminal-red);
+    background-color: rgba(255, 51, 51, 0.1);
+}
+
+.violations-container.hidden,
+.corrected-container.hidden {
+    display: none;
+}
+
+.violations-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.violation-card {
+    padding: var(--spacing-md);
+    border: 1px solid var(--terminal-red);
+    background-color: rgba(255, 51, 51, 0.05);
+}
+
+.violation-type {
+    color: var(--terminal-red);
+    font-weight: bold;
+    margin-bottom: var(--spacing-xs);
+}
+
+.violation-message {
+    margin-bottom: var(--spacing-sm);
+}
+
+.violation-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+.corrected-text {
+    padding: var(--spacing-md);
+    background-color: var(--terminal-bg);
+    border: 1px solid var(--terminal-green);
+    white-space: pre-wrap;
+    font-family: var(--font-terminal);
+}
+
+.result-metrics {
+    display: flex;
+    gap: var(--spacing-lg);
+    margin-top: var(--spacing-lg);
+    padding-top: var(--spacing-md);
+    border-top: 1px solid var(--border-color);
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+/* ============================================================================
+   History
+   ============================================================================ */
+
+.history-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-md);
+}
+
+.history-count {
+    color: var(--text-secondary);
+}
+
+.history-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.history-entry {
+    padding: var(--spacing-md);
+    border: 1px solid var(--border-color);
+    background-color: var(--terminal-bg);
+}
+
+.entry-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: var(--spacing-sm);
+}
+
+.entry-time {
+    color: var(--text-secondary);
+}
+
+.entry-status {
+    font-weight: bold;
+}
+
+.entry-text {
+    margin-bottom: var(--spacing-sm);
+    padding: var(--spacing-sm);
+    background-color: var(--terminal-bg-alt);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.entry-meta {
+    display: flex;
+    gap: var(--spacing-lg);
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+.empty-state, .error-state {
+    text-align: center;
+    padding: var(--spacing-xl);
+    color: var(--text-secondary);
+}
+
+/* ============================================================================
+   Ontology
+   ============================================================================ */
+
+.ontology-intro {
+    margin-bottom: var(--spacing-lg);
+}
+
+.constraints-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+}
+
+.constraint-card {
+    padding: var(--spacing-md);
+    border: 1px solid var(--border-color);
+    background-color: var(--terminal-bg);
+}
+
+.constraint-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-sm);
+}
+
+.constraint-id {
+    color: var(--terminal-cyan);
+    font-weight: bold;
+}
+
+.constraint-name {
+    flex: 1;
+}
+
+.constraint-type {
+    font-size: var(--font-size-sm);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border: 1px solid;
+    border-radius: 2px;
+}
+
+.constraint-type.type-range {
+    border-color: var(--terminal-green);
+    color: var(--terminal-green);
+}
+
+.constraint-type.type-relational {
+    border-color: var(--terminal-amber);
+    color: var(--terminal-amber);
+}
+
+.constraint-type.type-physical {
+    border-color: var(--terminal-cyan);
+    color: var(--terminal-cyan);
+}
+
+.constraint-expression {
+    margin-bottom: var(--spacing-sm);
+}
+
+.constraint-expression code {
+    display: block;
+    padding: var(--spacing-sm);
+}
+
+.constraint-description {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+.ontology-tree {
+    margin-bottom: var(--spacing-lg);
+}
+
+.ontology-tree pre {
+    padding: var(--spacing-md);
+    background-color: var(--terminal-bg);
+    border: 1px solid var(--border-color);
+    overflow-x: auto;
+}
+
+.terminal-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.terminal-table th,
+.terminal-table td {
+    padding: var(--spacing-sm) var(--spacing-md);
+    text-align: left;
+    border: 1px solid var(--border-color);
+}
+
+.terminal-table th {
+    background-color: var(--terminal-bg);
+    color: var(--terminal-cyan);
+}
+
+.terminal-table tr:hover td {
+    background-color: var(--hover-bg);
+}
+
+/* ============================================================================
+   System Info
+   ============================================================================ */
+
+.system-info {
+    margin: var(--spacing-lg) 0;
+}
+
+.system-info p {
+    margin-bottom: var(--spacing-xs);
+}
+
+.feature-list {
+    margin: var(--spacing-lg) 0;
+}
+
+.feature-list ul {
+    list-style: none;
+    padding-left: var(--spacing-md);
+}
+
+.feature-list li {
+    margin-bottom: var(--spacing-xs);
+}
+
+.bullet {
+    color: var(--terminal-green-bright);
+    margin-right: var(--spacing-sm);
+}
+
+.description {
+    margin: var(--spacing-lg) 0;
+}
+
+/* ============================================================================
+   Error Pages
+   ============================================================================ */
+
+.error-page .terminal-content {
+    text-align: center;
+}
+
+.error-page .error-ascii {
+    margin: var(--spacing-xl) 0;
+}
+
+.error-page .error-ascii pre {
+    color: var(--terminal-red);
+    text-shadow: 0 0 10px rgba(255, 51, 51, 0.5);
+}
+
+.error-page .error-message {
+    margin-bottom: var(--spacing-xl);
+}
+
+/* ============================================================================
+   Footer
+   ============================================================================ */
+
+.terminal-footer {
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-top: 1px solid var(--border-color);
+    background-color: var(--terminal-bg-alt);
+    text-align: center;
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+.separator {
+    margin: 0 var(--spacing-sm);
+}
+
+/* ============================================================================
+   Responsive
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .terminal-nav {
+        flex-direction: column;
+        gap: var(--spacing-md);
+    }
+
+    .nav-links {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .terminal-main {
+        padding: var(--spacing-md);
+    }
+
+    .ascii-art pre {
+        font-size: 10px;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+    }
+
+    .form-actions {
+        flex-direction: column;
+    }
+
+    .result-metrics {
+        flex-direction: column;
+        gap: var(--spacing-sm);
+    }
+
+    .entry-meta {
+        flex-direction: column;
+        gap: var(--spacing-xs);
+    }
+}
+
+/* ============================================================================
+   Accessibility
+   ============================================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+    .crt-screen {
+        animation: none;
+    }
+
+    .blink {
+        animation: none;
+    }
+
+    .loading-spinner {
+        animation: none;
+    }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+    :root {
+        --terminal-green: #00ff00;
+        --terminal-green-dim: #00dd00;
+        --terminal-bg: #000000;
+    }
+}
