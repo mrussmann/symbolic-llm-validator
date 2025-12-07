@@ -72,6 +72,7 @@ class ValidationRequest(BaseModel):
     text: str = Field(..., min_length=1, description="The text to validate")
     schema_name: str = Field(default="maintenance", description="The schema/domain to use")
     max_iterations: Optional[int] = Field(None, ge=1, le=10, description="Override max iterations")
+    auto_correct: bool = Field(default=True, description="Whether to auto-correct errors")
 
 
 class ValidationResponse(BaseModel):
@@ -79,10 +80,12 @@ class ValidationResponse(BaseModel):
     success: bool
     data: Optional[dict[str, Any]] = None
     violations: list[dict[str, Any]] = Field(default_factory=list)
+    original_violations: list[dict[str, Any]] = Field(default_factory=list)
     iterations: int = 1
     checked_constraints: int = 0
     processing_time_ms: float = 0.0
     confidence: float = 1.0
+    corrected_text: Optional[str] = None
     error: Optional[str] = None
 
     @classmethod
@@ -117,3 +120,30 @@ class StatsResponse(BaseModel):
     avg_iterations: float = 0.0
     avg_processing_time_ms: float = 0.0
     constraints_count: int = 0
+
+
+class OntologyUploadRequest(BaseModel):
+    """Request model for uploading a custom ontology."""
+    name: str = Field(..., min_length=1, max_length=50, description="Unique name for the ontology")
+    description: str = Field(default="", max_length=500, description="Optional description")
+    ontology_schema: dict = Field(..., alias="schema", description="The ontology schema (JSON)")
+
+    model_config = {"populate_by_name": True}
+
+
+class OntologyInfoResponse(BaseModel):
+    """Response model for ontology info."""
+    name: str
+    description: str
+    version: str
+    created_at: datetime
+    concepts_count: int
+    constraints_count: int
+    is_default: bool
+    is_active: bool = False
+
+
+class OntologyListResponse(BaseModel):
+    """Response model for listing ontologies."""
+    ontologies: list[OntologyInfoResponse]
+    active: str

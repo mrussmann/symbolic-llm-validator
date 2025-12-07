@@ -1,9 +1,131 @@
 /**
  * Logic-Guard-Layer Terminal JavaScript
- * Handles clock updates and other terminal effects
+ * Handles clock updates, font size controls, mobile menu, and other terminal effects
  */
 
-// Update clock in footer
+// ============================================================================
+// Font Size Control
+// ============================================================================
+
+const FontSizeControl = {
+    sizes: [14, 16, 18, 20, 22, 24],
+    currentIndex: 2, // Default to 18px
+    storageKey: 'lgl-font-size',
+
+    init() {
+        // Load saved preference
+        const saved = localStorage.getItem(this.storageKey);
+        if (saved) {
+            const savedIndex = this.sizes.indexOf(parseInt(saved));
+            if (savedIndex !== -1) {
+                this.currentIndex = savedIndex;
+            }
+        }
+
+        // Apply initial size
+        this.apply();
+
+        // Setup event listeners
+        const decreaseBtn = document.getElementById('font-decrease');
+        const increaseBtn = document.getElementById('font-increase');
+
+        if (decreaseBtn) {
+            decreaseBtn.addEventListener('click', () => this.decrease());
+        }
+        if (increaseBtn) {
+            increaseBtn.addEventListener('click', () => this.increase());
+        }
+
+        // Update label
+        this.updateLabel();
+    },
+
+    apply() {
+        const size = this.sizes[this.currentIndex];
+        document.documentElement.style.setProperty('--font-size-base', `${size}px`);
+        document.documentElement.style.setProperty('--font-size-lg', `${size + 4}px`);
+        document.documentElement.style.setProperty('--font-size-sm', `${size - 2}px`);
+
+        // Dispatch custom event for other components (like visualization)
+        window.dispatchEvent(new CustomEvent('fontsizechange', { detail: { size } }));
+    },
+
+    increase() {
+        if (this.currentIndex < this.sizes.length - 1) {
+            this.currentIndex++;
+            this.apply();
+            this.save();
+            this.updateLabel();
+            addFlickerEffect();
+        }
+    },
+
+    decrease() {
+        if (this.currentIndex > 0) {
+            this.currentIndex--;
+            this.apply();
+            this.save();
+            this.updateLabel();
+            addFlickerEffect();
+        }
+    },
+
+    save() {
+        localStorage.setItem(this.storageKey, this.sizes[this.currentIndex]);
+    },
+
+    updateLabel() {
+        const label = document.getElementById('font-size-label');
+        if (label) {
+            // Show relative size indicator
+            const indicators = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+            label.textContent = indicators[this.currentIndex] || 'M';
+        }
+    },
+
+    getSize() {
+        return this.sizes[this.currentIndex];
+    }
+};
+
+// ============================================================================
+// Mobile Menu
+// ============================================================================
+
+const MobileMenu = {
+    init() {
+        const toggle = document.getElementById('mobile-menu-toggle');
+        const navLinks = document.querySelector('.nav-links');
+
+        if (toggle && navLinks) {
+            toggle.addEventListener('click', () => {
+                navLinks.classList.toggle('mobile-open');
+                toggle.classList.toggle('active');
+            });
+
+            // Close menu when clicking a link
+            navLinks.querySelectorAll('.nav-link').forEach(link => {
+                link.addEventListener('click', () => {
+                    navLinks.classList.remove('mobile-open');
+                    toggle.classList.remove('active');
+                });
+            });
+
+            // Close menu when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!toggle.contains(e.target) && !navLinks.contains(e.target)) {
+                    navLinks.classList.remove('mobile-open');
+                    toggle.classList.remove('active');
+                }
+            });
+        }
+    }
+};
+
+// ============================================================================
+// Clock
+// ============================================================================
+
 function updateClock() {
     const clockEl = document.getElementById('clock');
     if (clockEl) {
@@ -43,8 +165,15 @@ function typeWriter(element, text, speed = 30) {
     type();
 }
 
-// Initialize typing effects on page load
+// Initialize all modules on page load
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize font size control
+    FontSizeControl.init();
+
+    // Initialize mobile menu
+    MobileMenu.init();
+
+    // Initialize typing effects
     const typingElements = document.querySelectorAll('.typing-effect');
     typingElements.forEach(el => {
         const text = el.textContent;

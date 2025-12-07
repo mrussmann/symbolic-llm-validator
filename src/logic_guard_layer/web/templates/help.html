@@ -1,0 +1,583 @@
+{% extends "base.html" %}
+
+{% block title %}Logic-Guard-Layer - Help{% endblock %}
+
+{% block extra_css %}
+<style>
+    .help-section {
+        margin-bottom: var(--spacing-xl);
+    }
+    .help-section h3 {
+        margin-bottom: var(--spacing-md);
+        padding-bottom: var(--spacing-sm);
+        border-bottom: 1px solid var(--border-color);
+    }
+    .help-section h4 {
+        color: var(--terminal-cyan);
+        margin-top: var(--spacing-lg);
+        margin-bottom: var(--spacing-sm);
+    }
+    .help-content {
+        margin-left: var(--spacing-md);
+    }
+    .help-content p {
+        margin-bottom: var(--spacing-md);
+        line-height: 1.7;
+    }
+    .help-content ul {
+        list-style: none;
+        margin-bottom: var(--spacing-md);
+    }
+    .help-content li {
+        margin-bottom: var(--spacing-sm);
+        padding-left: var(--spacing-md);
+        position: relative;
+    }
+    .help-content li::before {
+        content: ">";
+        position: absolute;
+        left: 0;
+        color: var(--terminal-green-bright);
+    }
+    .diagram-box {
+        background-color: var(--terminal-bg);
+        border: 1px solid var(--border-color);
+        padding: var(--spacing-md);
+        margin: var(--spacing-md) 0;
+        overflow-x: auto;
+    }
+    .diagram-box pre {
+        margin: 0;
+        line-height: 1.4;
+        font-size: var(--font-size-sm);
+    }
+    .highlight {
+        color: var(--terminal-amber);
+    }
+    .concept {
+        color: var(--terminal-cyan);
+    }
+    .example-box {
+        background-color: var(--terminal-bg);
+        border-left: 3px solid var(--terminal-green);
+        padding: var(--spacing-md);
+        margin: var(--spacing-md) 0;
+    }
+    .example-label {
+        color: var(--terminal-green-bright);
+        font-weight: bold;
+        margin-bottom: var(--spacing-sm);
+    }
+    .toc {
+        background-color: var(--terminal-bg);
+        border: 1px solid var(--border-color);
+        padding: var(--spacing-md);
+        margin-bottom: var(--spacing-xl);
+    }
+    .toc-title {
+        color: var(--terminal-cyan);
+        margin-bottom: var(--spacing-sm);
+    }
+    .toc ul {
+        list-style: none;
+    }
+    .toc li {
+        margin-bottom: var(--spacing-xs);
+    }
+    .toc a {
+        color: var(--text-secondary);
+        text-decoration: none;
+    }
+    .toc a:hover {
+        color: var(--terminal-green-bright);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="terminal-container">
+    <div class="terminal-header">
+        <span class="prompt">&gt;</span> SYSTEM DOCUMENTATION
+    </div>
+
+    <div class="terminal-content">
+        <!-- Table of Contents -->
+        <div class="toc">
+            <div class="toc-title">[TABLE OF CONTENTS]</div>
+            <ul>
+                <li><a href="#problem">[1] The Problem: LLM Hallucinations in Technical Domains</a></li>
+                <li><a href="#approach">[2] The Neuro-Symbolic Approach</a></li>
+                <li><a href="#architecture">[3] System Architecture</a></li>
+                <li><a href="#ontology">[4] The Maintenance Ontology</a></li>
+                <li><a href="#validation">[5] Constraint Validation</a></li>
+                <li><a href="#correction">[6] Self-Correction Loop</a></li>
+                <li><a href="#usage">[7] Usage Guide</a></li>
+            </ul>
+        </div>
+
+        <!-- Section 1: The Problem -->
+        <div class="help-section" id="problem">
+            <h3><span class="prompt">&gt;</span> [1] THE PROBLEM: LLM HALLUCINATIONS IN TECHNICAL DOMAINS</h3>
+            <div class="help-content">
+                <p>
+                    Large Language Models (LLMs) have demonstrated remarkable capabilities in generating human-like text.
+                    However, they suffer from a critical limitation: <span class="highlight">hallucination</span> - the generation
+                    of plausible-sounding but factually incorrect or logically inconsistent information.
+                </p>
+                <p>
+                    In technical maintenance domains, hallucinations can lead to:
+                </p>
+                <ul>
+                    <li>Physically impossible specifications (e.g., negative operating hours)</li>
+                    <li>Contradictory measurements (e.g., pressure exceeding system limits)</li>
+                    <li>Logical inconsistencies (e.g., maintenance intervals exceeding component lifespan)</li>
+                    <li>Violated domain constraints (e.g., temperatures outside operational ranges)</li>
+                </ul>
+
+                <div class="example-box">
+                    <div class="example-label">[EXAMPLE: Hallucinated Technical Text]</div>
+                    <pre>"The hydraulic pump HP-2000 has been operating for 15000 hours
+with a maximum lifespan of 10000 hours. Current pressure is
+450 bar at -60°C. Status: active."</pre>
+                    <p style="margin-top: var(--spacing-sm); color: var(--terminal-red);">
+                        Violations: Operating hours exceed lifespan, pressure exceeds 350 bar limit,
+                        temperature below -40°C minimum.
+                    </p>
+                </div>
+
+                <h4>[1.1] Why This Matters</h4>
+                <p>
+                    In industrial and safety-critical applications, incorrect technical documentation can lead to:
+                </p>
+                <ul>
+                    <li>Equipment failures due to missed maintenance windows</li>
+                    <li>Safety hazards from operating outside specification limits</li>
+                    <li>Costly downtime from preventable component failures</li>
+                    <li>Regulatory non-compliance in audited environments</li>
+                </ul>
+
+                <h4>[1.2] The Limitation of Pure LLM Approaches</h4>
+                <p>
+                    LLMs lack explicit knowledge of domain constraints. They generate text based on statistical patterns
+                    rather than logical reasoning about physical laws, engineering specifications, or domain-specific rules.
+                    This makes them unreliable for technical documentation without additional validation layers.
+                </p>
+            </div>
+        </div>
+
+        <div class="terminal-divider"></div>
+
+        <!-- Section 2: The Approach -->
+        <div class="help-section" id="approach">
+            <h3><span class="prompt">&gt;</span> [2] THE NEURO-SYMBOLIC APPROACH</h3>
+            <div class="help-content">
+                <p>
+                    <span class="concept">Logic-Guard-Layer</span> implements a <span class="highlight">neuro-symbolic</span>
+                    architecture that combines the strengths of neural networks (LLMs) with symbolic reasoning (ontologies and logic).
+                </p>
+
+                <h4>[2.1] Neural Component (LLM)</h4>
+                <ul>
+                    <li>Natural language understanding and generation</li>
+                    <li>Semantic parsing of unstructured technical text</li>
+                    <li>Context-aware text correction and reformulation</li>
+                    <li>Flexible handling of varied input formats</li>
+                </ul>
+
+                <h4>[2.2] Symbolic Component (Ontology + Reasoner)</h4>
+                <ul>
+                    <li>Formal representation of domain knowledge</li>
+                    <li>Explicit constraint definitions with logical expressions</li>
+                    <li>Deterministic validation against rules</li>
+                    <li>Explainable violation detection</li>
+                </ul>
+
+                <div class="diagram-box">
+                    <pre>
+┌─────────────────────────────────────────────────────────────────┐
+│                    NEURO-SYMBOLIC ARCHITECTURE                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   ┌─────────────┐         ┌─────────────┐         ┌──────────┐ │
+│   │   INPUT     │         │   NEURAL    │         │ SYMBOLIC │ │
+│   │   TEXT      │───────▶ │   LAYER     │───────▶ │  LAYER   │ │
+│   │             │         │   (LLM)     │         │(Ontology)│ │
+│   └─────────────┘         └─────────────┘         └──────────┘ │
+│                                 │                       │       │
+│                                 │    ┌──────────────────┘       │
+│                                 │    │                          │
+│                                 ▼    ▼                          │
+│                           ┌──────────────┐                      │
+│                           │  VALIDATION  │                      │
+│                           │    RESULT    │                      │
+│                           └──────────────┘                      │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+                    </pre>
+                </div>
+
+                <h4>[2.3] Why Neuro-Symbolic?</h4>
+                <p>
+                    The combination addresses limitations of each approach alone:
+                </p>
+                <ul>
+                    <li><span class="highlight">LLMs alone:</span> Generate fluent but potentially incorrect text</li>
+                    <li><span class="highlight">Symbolic alone:</span> Rigid, cannot handle natural language variation</li>
+                    <li><span class="highlight">Combined:</span> Fluent text that respects logical constraints</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="terminal-divider"></div>
+
+        <!-- Section 3: Architecture -->
+        <div class="help-section" id="architecture">
+            <h3><span class="prompt">&gt;</span> [3] SYSTEM ARCHITECTURE</h3>
+            <div class="help-content">
+                <p>
+                    The system consists of four main components working in a pipeline:
+                </p>
+
+                <div class="diagram-box">
+                    <pre>
+┌──────────────────────────────────────────────────────────────────────┐
+│                        PROCESSING PIPELINE                           │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────────┐   │
+│  │  PARSER  │───▶│ REASONER │───▶│CORRECTOR │───▶│ ORCHESTRATOR │   │
+│  │  (LLM)   │    │(Symbolic)│    │  (LLM)   │    │  (Control)   │   │
+│  └──────────┘    └──────────┘    └──────────┘    └──────────────┘   │
+│       │               │               │                  │           │
+│       ▼               ▼               ▼                  ▼           │
+│  ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────────┐   │
+│  │ Extract  │    │ Validate │    │ Generate │    │   Iterate    │   │
+│  │  Values  │    │  Against │    │ Corrected│    │    Until     │   │
+│  │   from   │    │Constraints│   │   Text   │    │   Valid      │   │
+│  │   Text   │    │          │    │          │    │              │   │
+│  └──────────┘    └──────────┘    └──────────┘    └──────────────┘   │
+│                                                                      │
+└──────────────────────────────────────────────────────────────────────┘
+                    </pre>
+                </div>
+
+                <h4>[3.1] Parser</h4>
+                <p>
+                    Uses an LLM to extract structured data from natural language text. The parser identifies:
+                </p>
+                <ul>
+                    <li>Component names and types</li>
+                    <li>Numerical measurements (pressure, temperature, RPM)</li>
+                    <li>Temporal values (operating hours, maintenance intervals)</li>
+                    <li>Status indicators and conditions</li>
+                </ul>
+
+                <h4>[3.2] Reasoner</h4>
+                <p>
+                    A symbolic engine that validates extracted values against the ontology constraints:
+                </p>
+                <ul>
+                    <li>Range constraints (min/max values for properties)</li>
+                    <li>Relational constraints (relationships between values)</li>
+                    <li>Physical constraints (real-world physical laws)</li>
+                </ul>
+
+                <h4>[3.3] Corrector</h4>
+                <p>
+                    When violations are detected, the corrector uses an LLM to generate corrected text:
+                </p>
+                <ul>
+                    <li>Receives original text plus violation details</li>
+                    <li>Generates new text that fixes the violations</li>
+                    <li>Preserves the original style and structure</li>
+                </ul>
+
+                <h4>[3.4] Orchestrator</h4>
+                <p>
+                    Controls the overall flow and implements the correction loop:
+                </p>
+                <ul>
+                    <li>Coordinates parser, reasoner, and corrector</li>
+                    <li>Iterates until text is valid or max iterations reached</li>
+                    <li>Tracks processing metrics and history</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="terminal-divider"></div>
+
+        <!-- Section 4: Ontology -->
+        <div class="help-section" id="ontology">
+            <h3><span class="prompt">&gt;</span> [4] THE MAINTENANCE ONTOLOGY</h3>
+            <div class="help-content">
+                <p>
+                    The system uses a formal <span class="concept">ontology</span> - a structured representation of knowledge
+                    about the maintenance domain. This ontology defines:
+                </p>
+
+                <h4>[4.1] Concept Hierarchy</h4>
+                <p>
+                    Components are organized in a taxonomic hierarchy:
+                </p>
+                <div class="diagram-box">
+                    <pre>
+Component
+├── RotatingComponent
+│   ├── Motor
+│   │   └── ElectricMotor
+│   └── Pump
+│       ├── HydraulicPump
+│       └── VacuumPump
+├── StaticComponent
+│   ├── Valve
+│   │   ├── ControlValve
+│   │   └── ShutoffValve
+│   └── Container
+└── Sensor
+    ├── PressureSensor
+    └── TemperatureSensor
+                    </pre>
+                </div>
+
+                <h4>[4.2] Properties</h4>
+                <p>
+                    Each concept has associated properties with defined ranges:
+                </p>
+                <ul>
+                    <li><span class="concept">operating_hours:</span> Integer >= 0</li>
+                    <li><span class="concept">max_lifespan:</span> Integer > 0</li>
+                    <li><span class="concept">maintenance_interval:</span> Integer > 0, <= max_lifespan</li>
+                    <li><span class="concept">pressure_bar:</span> Float 0-350</li>
+                    <li><span class="concept">temperature_c:</span> Float -40 to 150</li>
+                    <li><span class="concept">rpm:</span> Integer 0-10000</li>
+                    <li><span class="concept">status:</span> Enum {active, defective, maintenance}</li>
+                </ul>
+
+                <h4>[4.3] Relationships</h4>
+                <p>
+                    The ontology also defines relationships between concepts:
+                </p>
+                <ul>
+                    <li><span class="concept">hasComponent:</span> Plant -> Component</li>
+                    <li><span class="concept">isPartOf:</span> Component -> Plant</li>
+                    <li><span class="concept">hasMaintenance:</span> Component -> MaintenanceEvent</li>
+                    <li><span class="concept">performedBy:</span> MaintenanceEvent -> Technician</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="terminal-divider"></div>
+
+        <!-- Section 5: Validation -->
+        <div class="help-section" id="validation">
+            <h3><span class="prompt">&gt;</span> [5] CONSTRAINT VALIDATION</h3>
+            <div class="help-content">
+                <p>
+                    The reasoner validates extracted data against three types of constraints:
+                </p>
+
+                <h4>[5.1] Range Constraints</h4>
+                <p>
+                    Ensure values fall within acceptable bounds:
+                </p>
+                <div class="example-box">
+                    <div class="example-label">[RANGE CONSTRAINT EXAMPLES]</div>
+                    <pre>
+C001: operating_hours >= 0
+C002: max_lifespan > 0
+C003: pressure_bar BETWEEN 0 AND 350
+C004: temperature_c BETWEEN -40 AND 150
+C005: rpm BETWEEN 0 AND 10000
+                    </pre>
+                </div>
+
+                <h4>[5.2] Relational Constraints</h4>
+                <p>
+                    Ensure logical relationships between values are maintained:
+                </p>
+                <div class="example-box">
+                    <div class="example-label">[RELATIONAL CONSTRAINT EXAMPLES]</div>
+                    <pre>
+C006: operating_hours <= max_lifespan
+C007: maintenance_interval <= max_lifespan
+C008: IF status = "active" THEN operating_hours < max_lifespan
+                    </pre>
+                </div>
+
+                <h4>[5.3] Physical Constraints</h4>
+                <p>
+                    Enforce real-world physical laws and engineering limits:
+                </p>
+                <div class="example-box">
+                    <div class="example-label">[PHYSICAL CONSTRAINT EXAMPLES]</div>
+                    <pre>
+C009: IF component_type = "HydraulicPump" THEN pressure_bar <= 350
+C010: IF component_type = "VacuumPump" THEN pressure_bar <= 1
+C011: Temperature and pressure must be physically consistent
+                    </pre>
+                </div>
+
+                <h4>[5.4] Violation Detection</h4>
+                <p>
+                    When a constraint is violated, the system generates detailed diagnostics:
+                </p>
+                <ul>
+                    <li>Constraint ID and name</li>
+                    <li>Current value vs. expected range</li>
+                    <li>Severity level (error, warning)</li>
+                    <li>Suggested correction</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="terminal-divider"></div>
+
+        <!-- Section 6: Correction -->
+        <div class="help-section" id="correction">
+            <h3><span class="prompt">&gt;</span> [6] SELF-CORRECTION LOOP</h3>
+            <div class="help-content">
+                <p>
+                    When violations are detected and auto-correction is enabled, the system enters
+                    an iterative correction loop:
+                </p>
+
+                <div class="diagram-box">
+                    <pre>
+┌─────────────────────────────────────────────────────────────┐
+│                    CORRECTION LOOP                          │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│   ┌─────────┐                                               │
+│   │  INPUT  │                                               │
+│   │  TEXT   │                                               │
+│   └────┬────┘                                               │
+│        │                                                    │
+│        ▼                                                    │
+│   ┌─────────┐     ┌──────────┐     ┌─────────────┐         │
+│   │  PARSE  │────▶│ VALIDATE │────▶│  VIOLATIONS │         │
+│   └─────────┘     └──────────┘     │   FOUND?    │         │
+│        ▲                           └──────┬──────┘         │
+│        │                                  │                │
+│        │              ┌───────────────────┼───────────┐    │
+│        │              │                   │           │    │
+│        │              ▼                   ▼           │    │
+│        │         ┌─────────┐         ┌─────────┐     │    │
+│        │         │   YES   │         │   NO    │     │    │
+│        │         └────┬────┘         └────┬────┘     │    │
+│        │              │                   │           │    │
+│        │              ▼                   ▼           │    │
+│        │         ┌─────────┐         ┌─────────┐     │    │
+│        │         │ CORRECT │         │  RETURN │     │    │
+│        └─────────│  TEXT   │         │  VALID  │     │    │
+│      (iterate)   └─────────┘         │  TEXT   │     │    │
+│                                      └─────────┘     │    │
+│                                                      │    │
+│   Max iterations: 3 (configurable)                   │    │
+│                                                      │    │
+└──────────────────────────────────────────────────────┘    │
+                    </pre>
+                </div>
+
+                <h4>[6.1] Correction Strategy</h4>
+                <p>
+                    The LLM corrector receives:
+                </p>
+                <ul>
+                    <li>Original text that needs correction</li>
+                    <li>List of detected violations with details</li>
+                    <li>Domain constraints for reference</li>
+                    <li>Instructions to preserve style and meaning</li>
+                </ul>
+
+                <h4>[6.2] Iteration Limits</h4>
+                <p>
+                    The loop continues until either:
+                </p>
+                <ul>
+                    <li>All violations are resolved (success)</li>
+                    <li>Maximum iterations reached (partial correction)</li>
+                    <li>No progress is made between iterations (stuck)</li>
+                </ul>
+
+                <h4>[6.3] Correction Example</h4>
+                <div class="example-box">
+                    <div class="example-label">[BEFORE CORRECTION]</div>
+                    <pre>"Pump HP-500: 12000 operating hours, max lifespan 10000 hours,
+pressure 400 bar, status: active"</pre>
+                </div>
+                <div class="example-box" style="border-left-color: var(--terminal-green);">
+                    <div class="example-label" style="color: var(--terminal-green);">[AFTER CORRECTION]</div>
+                    <pre>"Pump HP-500: 8000 operating hours, max lifespan 10000 hours,
+pressure 320 bar, status: active"</pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="terminal-divider"></div>
+
+        <!-- Section 7: Usage -->
+        <div class="help-section" id="usage">
+            <h3><span class="prompt">&gt;</span> [7] USAGE GUIDE</h3>
+            <div class="help-content">
+                <h4>[7.1] Basic Validation</h4>
+                <ul>
+                    <li>Navigate to the <a href="/validate" style="color: var(--terminal-cyan);">[VALIDATE]</a> page</li>
+                    <li>Enter or paste technical maintenance text</li>
+                    <li>Click "EXECUTE VALIDATION" to check for violations</li>
+                    <li>Review the results showing any constraint violations</li>
+                </ul>
+
+                <h4>[7.2] Auto-Correction</h4>
+                <ul>
+                    <li>Enable "Auto-correct violations" checkbox before validating</li>
+                    <li>The system will attempt to fix detected violations</li>
+                    <li>Corrected text is displayed alongside original violations</li>
+                    <li>Review corrections before using the output</li>
+                </ul>
+
+                <h4>[7.3] Sample Inputs</h4>
+                <p>
+                    Use the sample selector to load pre-defined test cases:
+                </p>
+                <ul>
+                    <li><span class="concept">Valid sample:</span> Text with no violations</li>
+                    <li><span class="concept">Invalid samples:</span> Text with various constraint violations</li>
+                </ul>
+
+                <h4>[7.4] Viewing Constraints</h4>
+                <ul>
+                    <li>Navigate to <a href="/ontology" style="color: var(--terminal-cyan);">[ONTOLOGY]</a> to see all active constraints</li>
+                    <li>View the component hierarchy and property ranges</li>
+                    <li>Explore the <a href="/visualization" style="color: var(--terminal-cyan);">[VISUALIZATION]</a> for an interactive graph</li>
+                </ul>
+
+                <h4>[7.5] API Access</h4>
+                <p>
+                    For programmatic access, use the REST API:
+                </p>
+                <div class="example-box">
+                    <div class="example-label">[API ENDPOINTS]</div>
+                    <pre>
+POST /api/validate        - Validate text (JSON response)
+POST /api/validate/stream - Validate with SSE progress events
+GET  /api/constraints     - List all constraints
+GET  /api/ontology        - Get ontology schema
+GET  /api/health          - Health check
+                    </pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="terminal-divider"></div>
+
+        <div class="action-buttons">
+            <a href="/validate" class="terminal-button primary">
+                <span class="button-icon">&gt;</span> START VALIDATION
+            </a>
+            <a href="/ontology" class="terminal-button">
+                <span class="button-icon">&gt;</span> VIEW ONTOLOGY
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,156 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Sample Domain Ontology",
+  "description": "Example ontology schema showing the required format for custom uploads",
+  "version": "1.0.0",
+
+  "definitions": {
+    "concepts": {
+      "Vehicle": {
+        "description": "Base class for all vehicles",
+        "parent": null,
+        "children": ["Car", "Motorcycle", "Truck"]
+      },
+      "Car": {
+        "description": "Passenger car",
+        "parent": "Vehicle",
+        "children": ["ElectricCar", "HybridCar"]
+      },
+      "ElectricCar": {
+        "description": "Fully electric vehicle",
+        "parent": "Car",
+        "children": []
+      },
+      "HybridCar": {
+        "description": "Hybrid electric-gasoline vehicle",
+        "parent": "Car",
+        "children": []
+      },
+      "Motorcycle": {
+        "description": "Two-wheeled motor vehicle",
+        "parent": "Vehicle",
+        "children": []
+      },
+      "Truck": {
+        "description": "Heavy goods vehicle",
+        "parent": "Vehicle",
+        "children": []
+      },
+      "Driver": {
+        "description": "Person operating a vehicle",
+        "parent": null,
+        "children": []
+      },
+      "Trip": {
+        "description": "A journey from one place to another",
+        "parent": null,
+        "children": []
+      }
+    },
+
+    "properties": {
+      "datatype": {
+        "mileage": {
+          "description": "Total distance traveled in kilometers",
+          "domain": ["Vehicle"],
+          "range": "integer",
+          "constraints": {
+            "minimum": 0
+          }
+        },
+        "year": {
+          "description": "Manufacturing year",
+          "domain": ["Vehicle"],
+          "range": "integer",
+          "constraints": {
+            "minimum": 1900,
+            "maximum": 2030
+          }
+        },
+        "fuelLevel": {
+          "description": "Fuel level percentage (0-100)",
+          "domain": ["Vehicle"],
+          "range": "float",
+          "constraints": {
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "batteryCapacity": {
+          "description": "Battery capacity in kWh",
+          "domain": ["ElectricCar", "HybridCar"],
+          "range": "float",
+          "constraints": {
+            "minimum": 0,
+            "maximum": 200
+          }
+        },
+        "maxSpeed": {
+          "description": "Maximum speed in km/h",
+          "domain": ["Vehicle"],
+          "range": "integer",
+          "constraints": {
+            "minimum": 0,
+            "maximum": 400
+          }
+        },
+        "licensePlate": {
+          "description": "Vehicle license plate number",
+          "domain": ["Vehicle"],
+          "range": "string"
+        }
+      },
+      "object": {
+        "ownedBy": {
+          "description": "Vehicle is owned by a driver",
+          "domain": ["Vehicle"],
+          "range": ["Driver"]
+        },
+        "drives": {
+          "description": "Driver operates a vehicle",
+          "domain": ["Driver"],
+          "range": ["Vehicle"],
+          "inverseOf": "ownedBy"
+        }
+      }
+    },
+
+    "constraints": [
+      {
+        "id": "C1",
+        "name": "Mileage non-negative",
+        "type": "range",
+        "expression": "mileage >= 0",
+        "description": "Vehicle mileage must be non-negative"
+      },
+      {
+        "id": "C2",
+        "name": "Valid manufacturing year",
+        "type": "range",
+        "expression": "1900 <= year <= 2030",
+        "description": "Manufacturing year must be between 1900 and 2030"
+      },
+      {
+        "id": "C3",
+        "name": "Fuel level percentage",
+        "type": "physical",
+        "expression": "0 <= fuel_level <= 100",
+        "description": "Fuel level must be a valid percentage (0-100)"
+      },
+      {
+        "id": "C4",
+        "name": "Speed limit",
+        "type": "physical",
+        "expression": "0 <= max_speed <= 400",
+        "description": "Maximum speed must be within realistic bounds"
+      },
+      {
+        "id": "C5",
+        "name": "Battery capacity range",
+        "type": "physical",
+        "expression": "0 <= battery_capacity <= 200",
+        "description": "Battery capacity must be between 0 and 200 kWh"
+      }
+    ]
+  }
+}

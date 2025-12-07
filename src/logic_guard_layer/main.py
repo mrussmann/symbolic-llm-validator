@@ -1,15 +1,20 @@
 """FastAPI application for Logic-Guard-Layer."""
 
+import asyncio
+import json
 import logging
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import Optional
+from typing import AsyncGenerator, Optional
 
-from fastapi import FastAPI, HTTPException, Request
+import secrets
+import uuid
+from fastapi import FastAPI, HTTPException, Request, Depends, status, Form, Cookie, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from sse_starlette.sse import EventSourceResponse
 
 from logic_guard_layer import __version__
 from logic_guard_layer.config import settings
@@ -18,8 +23,13 @@ from logic_guard_layer.models.responses import (
     ValidationRequest,
     ValidationResponse,
     ValidationResult,
+    OntologyUploadRequest,
+    OntologyInfoResponse,
+    OntologyListResponse,
 )
 from logic_guard_layer.ontology.constraints import get_all_constraints
+from logic_guard_layer.ontology.manager import get_ontology_manager, OntologyInfo
+from logic_guard_layer.data import SCHEMA_PATH, DATA_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -33,11 +43,94 @@ STATIC_DIR = BASE_DIR / "web" / "static"
 # Store for validation history (in-memory for simplicity)
 validation_history: list[dict] = []
 
+# Session store (in-memory)
+sessions: dict[str, dict] = {}
+
+# Application state
+app_state = {
+    "enabled_for_public": True,  # App enabled for non-authenticated users by default
+}
+
+# Admin credentials
+ADMIN_USERNAME = "myjoe"
+ADMIN_PASSWORD = "design41."
+
+
+def create_session(username: str) -> str:
+    """Create a new session and return session ID."""
+    session_id = str(uuid.uuid4())
+    sessions[session_id] = {
+        "username": username,
+        "created_at": datetime.utcnow(),
+    }
+    return session_id
+
+
+def get_session(session_id: str) -> Optional[dict]:
+    """Get session data by ID."""
+    return sessions.get(session_id)
+
+
+def delete_session(session_id: str) -> None:
+    """Delete a session."""
+    if session_id in sessions:
+        del sessions[session_id]
+
+
+def verify_credentials(username: str, password: str) -> bool:
+    """Verify login credentials."""
+    correct_username = secrets.compare_digest(username.encode("utf8"), ADMIN_USERNAME.encode("utf8"))
+    correct_password = secrets.compare_digest(password.encode("utf8"), ADMIN_PASSWORD.encode("utf8"))
+    return correct_username and correct_password
+
+
+def get_current_user(session_id: Optional[str] = Cookie(None, alias="session_id")) -> Optional[str]:
+    """Get current logged-in user from session cookie."""
+    if not session_id:
+        return None
+    session = get_session(session_id)
+    if session:
+        return session["username"]
+    return None
+
+
+def require_admin(session_id: Optional[str] = Cookie(None, alias="session_id")) -> str:
+    """Require admin authentication, redirect to login if not authenticated."""
+    user = get_current_user(session_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_303_SEE_OTHER,
+            headers={"Location": "/login"}
+        )
+    return user
+
+
+def check_app_enabled(session_id: Optional[str] = Cookie(None, alias="session_id")):
+    """Check if application is enabled for the current user."""
+    # Logged-in users always have access
+    user = get_current_user(session_id)
+    if user:
+        return
+
+    # Non-authenticated users check public access
+    if not app_state["enabled_for_public"]:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Application is currently disabled for public access. Please login to continue.",
+        )
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan handler."""
     logger.info(f"Starting Logic-Guard-Layer v{__version__}")
+
+    # Initialize OntologyManager with default ontology
+    ontology_manager = get_ontology_manager()
+    if SCHEMA_PATH.exists():
+        ontology_manager.load_default_ontology(SCHEMA_PATH)
+        logger.info("Loaded default maintenance ontology")
+
     yield
     # Cleanup
     await reset_orchestrator()
@@ -85,7 +178,7 @@ async def health_check():
 
 
 @app.post("/api/validate", response_model=ValidationResponse)
-async def validate_text(request: ValidationRequest):
+async def validate_text(request: ValidationRequest, session_id: Optional[str] = Cookie(None, alias="session_id")):
     """Validate and optionally correct text.
 
     Args:
@@ -94,23 +187,43 @@ async def validate_text(request: ValidationRequest):
     Returns:
         ValidationResponse with results
     """
+    # Check if application is enabled
+    check_app_enabled(session_id)
+
     if not request.text.strip():
         raise HTTPException(status_code=400, detail="Text cannot be empty")
 
     try:
+        logger.info(f"Validating text: {request.text[:100]}...")
+        logger.info(f"Auto-correct: {request.auto_correct}")
+
         orchestrator = await get_orchestrator()
         orchestrator.auto_correct = request.auto_correct
 
         result = await orchestrator.process(request.text)
 
+        # Get original violations (before any correction)
+        original_violations = []
+        if result.initial_consistency and result.initial_consistency.violations:
+            original_violations = [
+                v.model_dump() if hasattr(v, 'model_dump') else v
+                for v in result.initial_consistency.violations
+            ]
+
+        logger.info(f"Validation result: is_valid={result.is_valid}, "
+                   f"original_violations={len(original_violations)}, "
+                   f"final_violations={len(result.final_violations)}")
+        if original_violations:
+            for v in original_violations:
+                logger.info(f"  Original violation: {v}")
+
         response = ValidationResponse(
-            result=ValidationResult(
-                is_valid=result.is_valid,
-                violations=result.final_violations,
-                corrected_text=result.final_text if result.was_corrected else None,
-                iterations=result.correction_result.iterations if result.correction_result else 1,
-            ),
+            success=result.is_valid,
+            violations=[v.model_dump() if hasattr(v, 'model_dump') else v for v in result.final_violations],
+            original_violations=original_violations,
+            iterations=result.correction_result.iterations if result.correction_result else 1,
             processing_time_ms=result.total_processing_time_ms,
+            corrected_text=result.final_text if result.was_corrected else None,
         )
 
         # Store in history
@@ -132,6 +245,241 @@ async def validate_text(request: ValidationRequest):
     except Exception as e:
         logger.error(f"Validation error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/validate/stream")
+async def validate_text_stream(request: ValidationRequest, session_id: Optional[str] = Cookie(None, alias="session_id")):
+    """Validate text with Server-Sent Events for progress updates.
+
+    Streams progress events as the validation pipeline executes.
+    """
+    # Check if application is enabled
+    check_app_enabled(session_id)
+
+    if not request.text.strip():
+        raise HTTPException(status_code=400, detail="Text cannot be empty")
+
+    async def event_generator() -> AsyncGenerator[dict, None]:
+        """Generate SSE events for validation progress."""
+        import time
+        start_time = time.time()
+
+        try:
+            # Step 1: Initialize
+            yield {
+                "event": "progress",
+                "data": json.dumps({
+                    "step": "init",
+                    "status": "running",
+                    "message": "Initializing validation pipeline...",
+                    "progress": 0
+                })
+            }
+
+            orchestrator = await get_orchestrator()
+            orchestrator.auto_correct = request.auto_correct
+
+            yield {
+                "event": "progress",
+                "data": json.dumps({
+                    "step": "init",
+                    "status": "done",
+                    "message": "Pipeline initialized",
+                    "progress": 10
+                })
+            }
+
+            # Step 2: Parse
+            yield {
+                "event": "progress",
+                "data": json.dumps({
+                    "step": "parse",
+                    "status": "running",
+                    "message": "Parsing text with LLM...",
+                    "progress": 15
+                })
+            }
+
+            await orchestrator._ensure_initialized()
+            parsed_data = await orchestrator.parser.parse(request.text)
+            raw_values = orchestrator.parser.extract_raw_values(parsed_data)
+
+            # Build extracted info message
+            extracted_info = []
+            if raw_values.get("name"):
+                extracted_info.append(f"Component: {raw_values['name']}")
+            if raw_values.get("operating_hours"):
+                extracted_info.append(f"Hours: {raw_values['operating_hours']}")
+            if raw_values.get("max_lifespan"):
+                extracted_info.append(f"Max lifespan: {raw_values['max_lifespan']}")
+            if raw_values.get("pressure_bar"):
+                extracted_info.append(f"Pressure: {raw_values['pressure_bar']} bar")
+            if raw_values.get("temperature_c"):
+                extracted_info.append(f"Temp: {raw_values['temperature_c']}°C")
+
+            yield {
+                "event": "progress",
+                "data": json.dumps({
+                    "step": "parse",
+                    "status": "done",
+                    "message": f"Extracted: {', '.join(extracted_info) if extracted_info else 'No data found'}",
+                    "progress": 35,
+                    "data": {"extracted": raw_values}
+                })
+            }
+
+            # Step 3: Validate
+            yield {
+                "event": "progress",
+                "data": json.dumps({
+                    "step": "validate",
+                    "status": "running",
+                    "message": f"Checking {len(orchestrator.reasoner.constraints)} constraints...",
+                    "progress": 40
+                })
+            }
+
+            consistency = orchestrator.reasoner.check_consistency(raw_values)
+
+            if consistency.is_consistent:
+                yield {
+                    "event": "progress",
+                    "data": json.dumps({
+                        "step": "validate",
+                        "status": "done",
+                        "message": "All constraints satisfied",
+                        "progress": 90
+                    })
+                }
+                final_text = request.text
+                final_violations = []
+                original_violations = []
+                was_corrected = False
+            else:
+                violation_msgs = [v.message for v in consistency.violations[:3]]
+                yield {
+                    "event": "progress",
+                    "data": json.dumps({
+                        "step": "validate",
+                        "status": "done",
+                        "message": f"Found {len(consistency.violations)} violation(s)",
+                        "progress": 50,
+                        "data": {"violations": violation_msgs}
+                    })
+                }
+
+                original_violations = [
+                    v.model_dump() if hasattr(v, 'model_dump') else v
+                    for v in consistency.violations
+                ]
+
+                if request.auto_correct:
+                    # Step 4: Correct
+                    yield {
+                        "event": "progress",
+                        "data": json.dumps({
+                            "step": "correct",
+                            "status": "running",
+                            "message": "Auto-correcting violations with LLM...",
+                            "progress": 55
+                        })
+                    }
+
+                    correction = await orchestrator.corrector.correct(request.text)
+
+                    if correction.is_consistent:
+                        yield {
+                            "event": "progress",
+                            "data": json.dumps({
+                                "step": "correct",
+                                "status": "done",
+                                "message": f"Corrected in {correction.iterations} iteration(s)",
+                                "progress": 85
+                            })
+                        }
+                    else:
+                        yield {
+                            "event": "progress",
+                            "data": json.dumps({
+                                "step": "correct",
+                                "status": "warning",
+                                "message": f"Could not fix all violations after {correction.iterations} iterations",
+                                "progress": 85
+                            })
+                        }
+
+                    final_text = correction.corrected_text
+                    final_violations = [
+                        v.model_dump() if hasattr(v, 'model_dump') else v
+                        for v in correction.final_violations
+                    ]
+                    was_corrected = request.text != correction.corrected_text
+                else:
+                    yield {
+                        "event": "progress",
+                        "data": json.dumps({
+                            "step": "correct",
+                            "status": "skipped",
+                            "message": "Auto-correction disabled",
+                            "progress": 85
+                        })
+                    }
+                    final_text = request.text
+                    final_violations = original_violations
+                    was_corrected = False
+
+            # Step 5: Complete
+            processing_time = (time.time() - start_time) * 1000
+
+            yield {
+                "event": "progress",
+                "data": json.dumps({
+                    "step": "complete",
+                    "status": "done",
+                    "message": f"Completed in {processing_time:.0f}ms",
+                    "progress": 100
+                })
+            }
+
+            # Final result
+            result = {
+                "success": len(final_violations) == 0,
+                "violations": final_violations,
+                "original_violations": original_violations,
+                "corrected_text": final_text if was_corrected else None,
+                "processing_time_ms": processing_time,
+                "iterations": 1
+            }
+
+            yield {
+                "event": "result",
+                "data": json.dumps(result)
+            }
+
+            # Store in history
+            validation_history.append({
+                "timestamp": datetime.utcnow().isoformat(),
+                "input_text": request.text[:100] + "..." if len(request.text) > 100 else request.text,
+                "is_valid": result["success"],
+                "violations_count": len(final_violations),
+                "was_corrected": was_corrected,
+                "processing_time_ms": processing_time,
+            })
+            if len(validation_history) > 100:
+                validation_history.pop(0)
+
+        except Exception as e:
+            logger.error(f"Validation stream error: {e}")
+            yield {
+                "event": "error",
+                "data": json.dumps({
+                    "step": "error",
+                    "status": "error",
+                    "message": str(e)
+                })
+            }
+
+    return EventSourceResponse(event_generator())
 
 
 @app.get("/api/constraints")
@@ -317,6 +665,116 @@ async def get_ontology_graph():
     }
 
 
+# ============================================================================
+# Ontology Management Endpoints
+# ============================================================================
+
+
+@app.get("/api/ontologies", response_model=OntologyListResponse)
+async def list_ontologies():
+    """List all available ontologies."""
+    manager = get_ontology_manager()
+    active_name = manager.get_active_name()
+
+    ontologies = []
+    for info in manager.list_ontologies():
+        ontologies.append(OntologyInfoResponse(
+            name=info.name,
+            description=info.description,
+            version=info.version,
+            created_at=info.created_at,
+            concepts_count=info.concepts_count,
+            constraints_count=info.constraints_count,
+            is_default=info.is_default,
+            is_active=(info.name == active_name),
+        ))
+
+    return OntologyListResponse(
+        ontologies=ontologies,
+        active=active_name,
+    )
+
+
+@app.post("/api/ontology/upload")
+async def upload_ontology(request: OntologyUploadRequest):
+    """Upload a new ontology schema."""
+    manager = get_ontology_manager()
+
+    errors = manager.register(
+        name=request.name,
+        schema=request.ontology_schema,
+        description=request.description,
+    )
+
+    if errors:
+        raise HTTPException(status_code=400, detail={"errors": errors})
+
+    info = manager.get_info(request.name.strip().lower().replace(" ", "-"))
+    return {
+        "success": True,
+        "message": f"Ontology '{request.name}' uploaded successfully",
+        "ontology": {
+            "name": info.name,
+            "concepts_count": info.concepts_count,
+            "constraints_count": info.constraints_count,
+        }
+    }
+
+
+@app.get("/api/ontology/sample")
+async def get_sample_ontology():
+    """Get a sample ontology schema to show the expected format."""
+    sample_path = DATA_DIR / "sample_ontology.json"
+    if sample_path.exists():
+        with open(sample_path) as f:
+            return json.load(f)
+    raise HTTPException(status_code=404, detail="Sample ontology not found")
+
+
+@app.get("/api/ontology/{name}")
+async def get_ontology_by_name(name: str):
+    """Get a specific ontology schema by name."""
+    manager = get_ontology_manager()
+    schema = manager.get(name)
+
+    if schema is None:
+        raise HTTPException(status_code=404, detail=f"Ontology '{name}' not found")
+
+    return schema
+
+
+@app.post("/api/ontology/{name}/activate")
+async def activate_ontology(name: str):
+    """Set an ontology as the active one for validation."""
+    manager = get_ontology_manager()
+
+    if not manager.set_active(name):
+        raise HTTPException(status_code=404, detail=f"Ontology '{name}' not found")
+
+    return {
+        "success": True,
+        "message": f"Ontology '{name}' is now active",
+        "active": name,
+    }
+
+
+@app.delete("/api/ontology/{name}")
+async def delete_ontology(name: str):
+    """Delete a custom ontology (cannot delete default)."""
+    manager = get_ontology_manager()
+
+    if name == "maintenance":
+        raise HTTPException(status_code=400, detail="Cannot delete the default ontology")
+
+    if not manager.delete(name):
+        raise HTTPException(status_code=404, detail=f"Ontology '{name}' not found")
+
+    return {
+        "success": True,
+        "message": f"Ontology '{name}' deleted",
+    }
+
+
 @app.get("/api/history")
 async def get_history(limit: int = 20):
     """Get validation history."""
@@ -335,6 +793,38 @@ async def get_info():
         "max_iterations": settings.max_correction_iterations,
         "api_configured": bool(settings.openrouter_api_key),
     }
+
+
+# ============================================================================
+# Admin Endpoints
+# ============================================================================
+
+
+@app.get("/api/admin/status")
+async def get_admin_status(user: str = Depends(require_admin)):
+    """Get application status (admin only)."""
+    return {
+        "enabled_for_public": app_state["enabled_for_public"],
+        "version": __version__,
+        "validation_count": len(validation_history),
+        "active_sessions": len(sessions),
+    }
+
+
+@app.post("/api/admin/enable")
+async def enable_application(user: str = Depends(require_admin)):
+    """Enable public access to the application (admin only)."""
+    app_state["enabled_for_public"] = True
+    logger.info(f"Public access ENABLED by admin: {user}")
+    return {"success": True, "enabled_for_public": True, "message": "Public access enabled"}
+
+
+@app.post("/api/admin/disable")
+async def disable_application(user: str = Depends(require_admin)):
+    """Disable public access to the application (admin only)."""
+    app_state["enabled_for_public"] = False
+    logger.info(f"Public access DISABLED by admin: {user}")
+    return {"success": True, "enabled_for_public": False, "message": "Public access disabled"}
 
 
 # ============================================================================
@@ -408,6 +898,98 @@ async def visualization_page(request: Request):
     return templates.TemplateResponse("visualization.html", {
         "request": request,
         "version": __version__,
+    })
+
+
+@app.get("/help", response_class=HTMLResponse)
+async def help_page(request: Request):
+    """Render the help/documentation page."""
+    if templates is None:
+        return HTMLResponse(content="Templates not found")
+
+    return templates.TemplateResponse("help.html", {
+        "request": request,
+        "version": __version__,
+    })
+
+
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request, session_id: Optional[str] = Cookie(None, alias="session_id")):
+    """Render the login page."""
+    # If already logged in, redirect to admin
+    if get_current_user(session_id):
+        return RedirectResponse(url="/admin", status_code=303)
+
+    if templates is None:
+        return HTMLResponse(content="Templates not found")
+
+    return templates.TemplateResponse("login.html", {
+        "request": request,
+        "version": __version__,
+        "error": None,
+    })
+
+
+@app.post("/login", response_class=HTMLResponse)
+async def login_submit(
+    request: Request,
+    response: Response,
+    username: str = Form(...),
+    password: str = Form(...),
+):
+    """Handle login form submission."""
+    if verify_credentials(username, password):
+        session_id = create_session(username)
+        response = RedirectResponse(url="/admin", status_code=303)
+        response.set_cookie(
+            key="session_id",
+            value=session_id,
+            httponly=True,
+            max_age=86400,  # 24 hours
+            samesite="lax",
+        )
+        logger.info(f"User '{username}' logged in")
+        return response
+
+    # Invalid credentials
+    if templates is None:
+        return HTMLResponse(content="Invalid credentials", status_code=401)
+
+    return templates.TemplateResponse("login.html", {
+        "request": request,
+        "version": __version__,
+        "error": "Invalid username or password",
+    }, status_code=401)
+
+
+@app.get("/logout")
+async def logout(session_id: Optional[str] = Cookie(None, alias="session_id")):
+    """Log out and clear session."""
+    if session_id:
+        delete_session(session_id)
+        logger.info("User logged out")
+
+    response = RedirectResponse(url="/", status_code=303)
+    response.delete_cookie("session_id")
+    return response
+
+
+@app.get("/admin", response_class=HTMLResponse)
+async def admin_page(request: Request, session_id: Optional[str] = Cookie(None, alias="session_id")):
+    """Render the admin page (requires authentication)."""
+    user = get_current_user(session_id)
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
+
+    if templates is None:
+        return HTMLResponse(content="Templates not found")
+
+    return templates.TemplateResponse("admin.html", {
+        "request": request,
+        "version": __version__,
+        "enabled_for_public": app_state["enabled_for_public"],
+        "validation_count": len(validation_history),
+        "username": user,
     })
 
 

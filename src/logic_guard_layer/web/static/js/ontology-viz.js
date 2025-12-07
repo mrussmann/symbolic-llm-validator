@@ -38,11 +38,30 @@ class OntologyVisualization {
             this.setupSVG();
             this.setupControls();
             this.renderGraph();
+
+            // Listen for global font size changes
+            window.addEventListener('fontsizechange', (e) => {
+                this.onFontSizeChange(e.detail.size);
+            });
         } catch (error) {
             console.error('Failed to initialize visualization:', error);
             this.showError('Failed to load ontology data');
         } finally {
             this.showLoading(false);
+        }
+    }
+
+    onFontSizeChange(size) {
+        // Calculate relative sizes based on global font size
+        const nodeSize = Math.max(10, size - 6);
+        const linkSize = Math.max(8, size - 8);
+
+        // Update graph node labels
+        if (this.g) {
+            this.g.selectAll('.node text')
+                .attr('font-size', `${nodeSize}px`);
+            this.g.selectAll('.link-label')
+                .attr('font-size', `${linkSize}px`);
         }
     }
 
@@ -204,7 +223,9 @@ class OntologyVisualization {
             .attr('marker-end', d => d.type === 'subclass' ? 'url(#arrow)' : 'url(#arrow-property)')
             .attr('opacity', 0.6);
 
-        // Edge labels
+        // Edge labels - use CSS variable for font size
+        const baseFontSize = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--font-size-base')) || 18;
+        const linkFontSize = Math.max(8, baseFontSize - 8);
         const linkLabels = this.g.append('g')
             .attr('class', 'link-labels')
             .selectAll('text')
@@ -213,7 +234,7 @@ class OntologyVisualization {
             .append('text')
             .attr('class', 'link-label')
             .attr('fill', this.colors.textDim)
-            .attr('font-size', '10px')
+            .attr('font-size', `${linkFontSize}px`)
             .attr('text-anchor', 'middle')
             .text(d => d.label);
 
@@ -240,12 +261,13 @@ class OntologyVisualization {
             .attr('filter', 'url(#glow)')
             .attr('opacity', 0.8);
 
-        // Node labels
+        // Node labels - use CSS variable for font size
+        const nodeFontSize = Math.max(10, baseFontSize - 6);
         node.append('text')
             .attr('dy', 30)
             .attr('text-anchor', 'middle')
             .attr('fill', this.colors.text)
-            .attr('font-size', '12px')
+            .attr('font-size', `${nodeFontSize}px`)
             .attr('font-family', 'Share Tech Mono, monospace')
             .text(d => d.id);
 

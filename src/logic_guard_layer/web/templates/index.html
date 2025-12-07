@@ -2,6 +2,49 @@
 
 {% block title %}Logic-Guard-Layer - Home{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* Remove spacing between title and status */
+    .terminal-header {
+        padding-bottom: 0.5rem;
+    }
+    .terminal-content {
+        padding-top: 0.5rem;
+    }
+    .system-info {
+        margin-top: 0;
+        margin-bottom: 0.5rem;
+    }
+    .terminal-divider {
+        margin: 0.5rem 0;
+    }
+    .description {
+        margin-top: 0;
+    }
+
+    /* Start Validation button - orange background */
+    .terminal-button.primary {
+        background-color: #ffb000 !important;
+        border-color: #ffb000 !important;
+        color: #0a0a0a !important;
+        text-shadow: none !important;
+    }
+    .terminal-button.primary:hover {
+        background-color: #ffcc33 !important;
+        border-color: #ffcc33 !important;
+    }
+    .terminal-button.primary .button-icon {
+        color: #0a0a0a !important;
+    }
+
+    /* Ensure buttons are fully visible */
+    .action-buttons {
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="terminal-container">
     <div class="terminal-header">
@@ -10,27 +53,16 @@
 
     <div class="terminal-content">
         <div class="system-info">
-            <p><span class="label">STATUS:</span> <span class="success">ONLINE</span></p>
-            <p><span class="label">VERSION:</span> {{ version }}</p>
-            <p><span class="label">MODEL:</span> <span id="model-name">Loading...</span></p>
-            <p><span class="label">API:</span> <span id="api-status">Checking...</span></p>
+            <span class="info-item"><span class="label">STATUS:</span> <span class="success">ONLINE</span></span>
+            <span class="info-item"><span class="label">VERSION:</span> {{ version }}</span>
+            <span class="info-item"><span class="label">MODEL:</span> <span id="model-name">Loading...</span></span>
+            <span class="info-item"><span class="label">API:</span> <span id="api-status">Checking...</span></span>
         </div>
 
         <div class="terminal-divider"></div>
 
         <div class="description">
             <p class="typing-effect"><span class="prompt">&gt;</span> Logic-Guard-Layer is a neuro-symbolic validation system that combines LLM capabilities with ontology-based reasoning to detect and correct logical inconsistencies in technical maintenance documents.</p>
-        </div>
-
-        <div class="feature-list">
-            <h3><span class="prompt">&gt;</span> SYSTEM CAPABILITIES:</h3>
-            <ul>
-                <li><span class="bullet">[+]</span> Semantic parsing of technical text</li>
-                <li><span class="bullet">[+]</span> Ontology-based constraint validation</li>
-                <li><span class="bullet">[+]</span> Automatic error detection</li>
-                <li><span class="bullet">[+]</span> Self-correction loop with LLM</li>
-                <li><span class="bullet">[+]</span> Iteration tracking and history</li>
-            </ul>
         </div>
 
         <div class="action-buttons">

@@ -180,6 +180,8 @@ class OpenRouterClient:
             max_tokens=max_tokens,
         )
 
+        logger.info(f"Raw LLM response: {response[:500]}...")
+
         # Try to extract JSON from the response
         response = response.strip()
 
@@ -194,7 +196,9 @@ class OpenRouterClient:
         response = response.strip()
 
         try:
-            return json.loads(response)
+            parsed = json.loads(response)
+            logger.info(f"Parsed JSON: {parsed}")
+            return parsed
         except json.JSONDecodeError as e:
             # Try to find JSON in the response
             start_idx = response.find("{")
@@ -202,10 +206,13 @@ class OpenRouterClient:
 
             if start_idx != -1 and end_idx > start_idx:
                 try:
-                    return json.loads(response[start_idx:end_idx])
+                    parsed = json.loads(response[start_idx:end_idx])
+                    logger.info(f"Parsed JSON (extracted): {parsed}")
+                    return parsed
                 except json.JSONDecodeError:
                     pass
 
+            logger.error(f"Failed to parse JSON: {response}")
             raise LLMError(f"Failed to parse JSON response: {e}") from e
 
     async def close(self):

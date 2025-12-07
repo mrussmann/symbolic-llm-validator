@@ -63,6 +63,8 @@ class ReasoningModule:
         violations = []
         checked = 0
 
+        logger.info(f"Checking consistency for data: {data}")
+
         for constraint in self.constraints:
             checked += 1
             try:
@@ -72,7 +74,7 @@ class ReasoningModule:
                     if "name" in data:
                         violation.entity = data["name"]
                     violations.append(violation)
-                    logger.debug(f"Constraint {constraint.id} violated: {violation.message}")
+                    logger.info(f"Constraint {constraint.id} ({constraint.name}) violated: {violation.message}")
             except Exception as e:
                 logger.warning(f"Error checking constraint {constraint.id}: {e}")
 
@@ -85,7 +87,7 @@ class ReasoningModule:
             processing_time_ms=processing_time,
         )
 
-        logger.debug(f"Consistency check: {result}")
+        logger.info(f"Consistency check complete: {checked} constraints checked, {len(violations)} violations found")
         return result
 
     def check_single_constraint(

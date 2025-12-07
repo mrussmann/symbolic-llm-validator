@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Logic-Guard-Layer{% endblock %}</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='%2300ff00'/></svg>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&display=swap" rel="stylesheet">
@@ -18,16 +19,24 @@
     <div class="crt-screen">
         <!-- Navigation -->
         <nav class="terminal-nav">
-            <div class="nav-brand">
+            <a href="/" class="nav-brand">
                 <span class="prompt">&gt;</span> LOGIC-GUARD-LAYER <span class="version">v{{ version }}</span>
-            </div>
+            </a>
             <div class="nav-links">
-                <a href="/" class="nav-link {% if request.url.path == '/' %}active{% endif %}">[HOME]</a>
                 <a href="/validate" class="nav-link {% if request.url.path == '/validate' %}active{% endif %}">[VALIDATE]</a>
                 <a href="/history" class="nav-link {% if request.url.path == '/history' %}active{% endif %}">[HISTORY]</a>
                 <a href="/ontology" class="nav-link {% if request.url.path == '/ontology' %}active{% endif %}">[ONTOLOGY]</a>
                 <a href="/visualization" class="nav-link {% if request.url.path == '/visualization' %}active{% endif %}">[VISUALIZATION]</a>
+                <a href="/help" class="nav-link {% if request.url.path == '/help' %}active{% endif %}">[HELP]</a>
             </div>
+            <div class="nav-controls">
+                <button class="font-control" id="font-decrease" title="Decrease font size">[-]</button>
+                <span class="font-size-label" id="font-size-label">A</span>
+                <button class="font-control" id="font-increase" title="Increase font size">[+]</button>
+            </div>
+            <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Toggle menu">
+                <span class="menu-icon"></span>
+            </button>
         </nav>
 
         <!-- Main content -->
@@ -40,6 +49,8 @@
             <div class="footer-content">
                 <span class="blink">_</span> NEURO-SYMBOLIC VALIDATION SYSTEM <span class="separator">|</span>
                 <span id="clock"></span>
+                <span class="separator">|</span>
+                <a href="/login" class="footer-link">[ADMIN]</a>
             </div>
         </footer>
     </div>

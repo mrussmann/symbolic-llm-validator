@@ -145,12 +145,16 @@ class Orchestrator:
             logger.info("Stage 1: Parsing input text")
             parsed_data = await self.parser.parse(text)
             result.parsed_data = parsed_data
+            logger.info(f"Parsed {len(parsed_data.components)} components")
+
             raw_values = self.parser.extract_raw_values(parsed_data)
+            logger.info(f"Extracted raw values: {raw_values}")
 
             # Stage 2: Validate
             logger.info("Stage 2: Validating against constraints")
             consistency = self.reasoner.check_consistency(raw_values)
             result.initial_consistency = consistency
+            logger.info(f"Consistency check: is_consistent={consistency.is_consistent}, violations={len(consistency.violations)}")
 
             if consistency.is_consistent:
                 # Already valid, no correction needed

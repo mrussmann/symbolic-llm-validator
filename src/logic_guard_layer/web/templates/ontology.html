@@ -2,15 +2,296 @@
 
 {% block title %}Logic-Guard-Layer - Ontology{% endblock %}
 
+{% block extra_css %}
+<style>
+    .ontology-controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        padding: 1rem;
+        background: rgba(0, 50, 0, 0.3);
+        border: 1px solid var(--terminal-green);
+    }
+
+    .control-section {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .control-label {
+        color: var(--terminal-green-dim);
+        font-size: 0.9rem;
+    }
+
+    .ontology-select {
+        background: #001100;
+        color: var(--terminal-green);
+        border: 1px solid var(--terminal-green);
+        padding: 0.4rem 0.8rem;
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 0.9rem;
+        cursor: pointer;
+    }
+
+    .ontology-select:focus {
+        outline: none;
+        box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+    }
+
+    .terminal-btn {
+        background: transparent;
+        color: var(--terminal-green);
+        border: 1px solid var(--terminal-green);
+        padding: 0.4rem 0.8rem;
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .terminal-btn:hover {
+        background: rgba(0, 255, 0, 0.1);
+        box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+    }
+
+    .terminal-btn.active {
+        background: rgba(0, 255, 0, 0.2);
+    }
+
+    .upload-section {
+        display: none;
+        margin-bottom: 1.5rem;
+        padding: 1rem;
+        background: rgba(0, 50, 0, 0.3);
+        border: 1px solid var(--terminal-green);
+    }
+
+    .upload-section.visible {
+        display: block;
+    }
+
+    .upload-form {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+    }
+
+    .form-group label {
+        color: var(--terminal-green-dim);
+        font-size: 0.85rem;
+    }
+
+    .form-input {
+        background: #001100;
+        color: var(--terminal-green);
+        border: 1px solid var(--terminal-green-dim);
+        padding: 0.5rem;
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 0.9rem;
+    }
+
+    .form-input:focus {
+        outline: none;
+        border-color: var(--terminal-green);
+        box-shadow: 0 0 5px rgba(0, 255, 0, 0.3);
+    }
+
+    .form-textarea {
+        min-height: 200px;
+        resize: vertical;
+    }
+
+    .upload-status {
+        padding: 0.5rem;
+        font-size: 0.85rem;
+        display: none;
+    }
+
+    .upload-status.success {
+        display: block;
+        color: var(--terminal-green);
+        background: rgba(0, 255, 0, 0.1);
+        border: 1px solid var(--terminal-green);
+    }
+
+    .upload-status.error {
+        display: block;
+        color: #ff4444;
+        background: rgba(255, 0, 0, 0.1);
+        border: 1px solid #ff4444;
+    }
+
+    .ontology-badge {
+        display: inline-block;
+        padding: 0.2rem 0.5rem;
+        font-size: 0.75rem;
+        border-radius: 2px;
+        margin-left: 0.5rem;
+    }
+
+    .badge-active {
+        background: var(--terminal-green);
+        color: #000;
+    }
+
+    .badge-default {
+        background: var(--terminal-amber);
+        color: #000;
+    }
+
+    .ontology-list {
+        margin-top: 1rem;
+    }
+
+    .ontology-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem;
+        border-bottom: 1px dashed var(--terminal-green-dim);
+    }
+
+    .ontology-item:last-child {
+        border-bottom: none;
+    }
+
+    .ontology-info {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .ontology-stats {
+        color: var(--terminal-green-dim);
+        font-size: 0.8rem;
+    }
+
+    .btn-delete {
+        color: #ff4444;
+        border-color: #ff4444;
+    }
+
+    .btn-delete:hover {
+        background: rgba(255, 68, 68, 0.1);
+        box-shadow: 0 0 10px rgba(255, 68, 68, 0.3);
+    }
+
+    .btn-small {
+        padding: 0.2rem 0.5rem;
+        font-size: 0.75rem;
+        margin-left: 0.5rem;
+    }
+
+    .format-guide {
+        margin-top: 1.5rem;
+        padding: 1rem;
+        background: rgba(0, 30, 0, 0.5);
+        border: 1px dashed var(--terminal-green-dim);
+    }
+
+    .format-guide h4 {
+        margin: 0 0 0.5rem 0;
+        color: var(--terminal-amber);
+    }
+
+    .format-guide pre {
+        margin: 0;
+        font-size: 0.8rem;
+        color: var(--terminal-green-dim);
+        overflow-x: auto;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="terminal-container">
     <div class="terminal-header">
-        <span class="prompt">&gt;</span> MAINTENANCE DOMAIN ONTOLOGY
+        <span class="prompt">&gt;</span> ONTOLOGY MANAGER
     </div>
 
     <div class="terminal-content">
-        <div class="ontology-intro">
-            <p><span class="prompt">&gt;</span> This system uses a formal ontology to define constraints for technical maintenance documents. The ontology includes component types, properties, and validation rules.</p>
+        <!-- Ontology Controls -->
+        <div class="ontology-controls">
+            <div class="control-section">
+                <span class="control-label">Active Ontology:</span>
+                <select id="ontology-select" class="ontology-select">
+                    <option value="maintenance">maintenance (default)</option>
+                </select>
+                <button id="btn-activate" class="terminal-btn">[ACTIVATE]</button>
+            </div>
+            <div class="control-section">
+                <button id="btn-toggle-upload" class="terminal-btn">[UPLOAD NEW]</button>
+                <button id="btn-refresh" class="terminal-btn">[REFRESH]</button>
+            </div>
+        </div>
+
+        <!-- Upload Section (hidden by default) -->
+        <div id="upload-section" class="upload-section">
+            <h3><span class="prompt">&gt;</span> UPLOAD NEW ONTOLOGY</h3>
+            <form id="upload-form" class="upload-form">
+                <div class="form-group">
+                    <label for="ontology-name">Ontology Name:</label>
+                    <input type="text" id="ontology-name" class="form-input" placeholder="e.g., my-domain" required>
+                </div>
+                <div class="form-group">
+                    <label for="ontology-description">Description (optional):</label>
+                    <input type="text" id="ontology-description" class="form-input" placeholder="Description of your ontology">
+                </div>
+                <div class="form-group">
+                    <label for="ontology-schema">JSON Schema: <button type="button" id="btn-load-sample" class="terminal-btn btn-small">[LOAD SAMPLE]</button></label>
+                    <textarea id="ontology-schema" class="form-input form-textarea" placeholder='{"definitions": {"concepts": {...}, "properties": {...}, "constraints": [...]}}'></textarea>
+                </div>
+                <div class="control-section">
+                    <button type="submit" class="terminal-btn">[UPLOAD]</button>
+                    <button type="button" id="btn-cancel-upload" class="terminal-btn">[CANCEL]</button>
+                </div>
+            </form>
+            <div id="upload-status" class="upload-status"></div>
+
+            <!-- Format Guide -->
+            <div class="format-guide">
+                <h4><span class="prompt">&gt;</span> EXPECTED FORMAT:</h4>
+                <pre>{
+  "definitions": {
+    "concepts": {
+      "ConceptName": {
+        "description": "Description of the concept",
+        "parent": null,           // or "ParentConcept"
+        "children": ["Child1"]    // list of child concepts
+      }
+    },
+    "properties": {
+      "datatype": { ... },        // data properties with constraints
+      "object": { ... }           // relationships between concepts
+    },
+    "constraints": [              // validation rules
+      {
+        "id": "C1",
+        "name": "Rule name",
+        "type": "range|physical|relational",
+        "expression": "value >= 0",
+        "description": "Description"
+      }
+    ]
+  }
+}</pre>
+            </div>
+        </div>
+
+        <!-- Registered Ontologies List -->
+        <div id="ontologies-list-section">
+            <h3><span class="prompt">&gt;</span> REGISTERED ONTOLOGIES:</h3>
+            <div id="ontologies-list" class="ontology-list">
+                <!-- Populated by JavaScript -->
+            </div>
         </div>
 
         <div class="terminal-divider"></div>
@@ -113,4 +394,192 @@ Component
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ontologySelect = document.getElementById('ontology-select');
+    const btnActivate = document.getElementById('btn-activate');
+    const btnToggleUpload = document.getElementById('btn-toggle-upload');
+    const btnRefresh = document.getElementById('btn-refresh');
+    const btnCancelUpload = document.getElementById('btn-cancel-upload');
+    const btnLoadSample = document.getElementById('btn-load-sample');
+    const uploadSection = document.getElementById('upload-section');
+    const uploadForm = document.getElementById('upload-form');
+    const uploadStatus = document.getElementById('upload-status');
+    const ontologiesList = document.getElementById('ontologies-list');
+    const ontologySchema = document.getElementById('ontology-schema');
+
+    // Load ontologies on page load
+    loadOntologies();
+
+    // Load sample ontology
+    btnLoadSample.addEventListener('click', async function() {
+        try {
+            const response = await fetch('/api/ontology/sample');
+            if (response.ok) {
+                const data = await response.json();
+                ontologySchema.value = JSON.stringify(data, null, 2);
+                document.getElementById('ontology-name').value = 'sample-vehicles';
+                document.getElementById('ontology-description').value = 'Sample vehicle domain ontology';
+                showStatus('success', 'Sample ontology loaded - you can modify it before uploading');
+            } else {
+                showStatus('error', 'Failed to load sample ontology');
+            }
+        } catch (error) {
+            showStatus('error', 'Network error loading sample');
+        }
+    });
+
+    // Toggle upload section
+    btnToggleUpload.addEventListener('click', function() {
+        uploadSection.classList.toggle('visible');
+        btnToggleUpload.textContent = uploadSection.classList.contains('visible') ? '[HIDE UPLOAD]' : '[UPLOAD NEW]';
+    });
+
+    btnCancelUpload.addEventListener('click', function() {
+        uploadSection.classList.remove('visible');
+        btnToggleUpload.textContent = '[UPLOAD NEW]';
+        uploadForm.reset();
+        uploadStatus.className = 'upload-status';
+    });
+
+    // Refresh ontologies list
+    btnRefresh.addEventListener('click', loadOntologies);
+
+    // Activate ontology
+    btnActivate.addEventListener('click', async function() {
+        const name = ontologySelect.value;
+        try {
+            const response = await fetch(`/api/ontology/${name}/activate`, {
+                method: 'POST'
+            });
+            if (response.ok) {
+                loadOntologies();
+                showStatus('success', `Ontology '${name}' activated`);
+            } else {
+                const data = await response.json();
+                showStatus('error', data.detail || 'Failed to activate ontology');
+            }
+        } catch (error) {
+            showStatus('error', 'Network error');
+        }
+    });
+
+    // Upload form submission
+    uploadForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const name = document.getElementById('ontology-name').value.trim();
+        const description = document.getElementById('ontology-description').value.trim();
+        const schemaText = document.getElementById('ontology-schema').value.trim();
+
+        // Parse JSON
+        let schema;
+        try {
+            schema = JSON.parse(schemaText);
+        } catch (error) {
+            showStatus('error', 'Invalid JSON: ' + error.message);
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/ontology/upload', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ name, description, schema })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                showStatus('success', `Ontology '${name}' uploaded successfully!`);
+                uploadForm.reset();
+                loadOntologies();
+            } else {
+                const errors = data.detail?.errors || [data.detail] || ['Upload failed'];
+                showStatus('error', errors.join(', '));
+            }
+        } catch (error) {
+            showStatus('error', 'Network error: ' + error.message);
+        }
+    });
+
+    async function loadOntologies() {
+        try {
+            const response = await fetch('/api/ontologies');
+            const data = await response.json();
+
+            // Update select dropdown
+            ontologySelect.innerHTML = '';
+            data.ontologies.forEach(ont => {
+                const option = document.createElement('option');
+                option.value = ont.name;
+                option.textContent = ont.name + (ont.is_default ? ' (default)' : '');
+                if (ont.is_active) {
+                    option.selected = true;
+                }
+                ontologySelect.appendChild(option);
+            });
+
+            // Update list
+            ontologiesList.innerHTML = '';
+            data.ontologies.forEach(ont => {
+                const item = document.createElement('div');
+                item.className = 'ontology-item';
+                item.innerHTML = `
+                    <div class="ontology-info">
+                        <span>${ont.name}</span>
+                        ${ont.is_active ? '<span class="ontology-badge badge-active">ACTIVE</span>' : ''}
+                        ${ont.is_default ? '<span class="ontology-badge badge-default">DEFAULT</span>' : ''}
+                    </div>
+                    <div class="ontology-stats">
+                        ${ont.concepts_count} concepts, ${ont.constraints_count} constraints
+                        ${!ont.is_default ? `<button class="terminal-btn btn-delete" data-name="${ont.name}">[DELETE]</button>` : ''}
+                    </div>
+                `;
+                ontologiesList.appendChild(item);
+            });
+
+            // Add delete handlers
+            document.querySelectorAll('.btn-delete').forEach(btn => {
+                btn.addEventListener('click', async function() {
+                    const name = this.dataset.name;
+                    if (confirm(`Delete ontology '${name}'?`)) {
+                        try {
+                            const response = await fetch(`/api/ontology/${name}`, {
+                                method: 'DELETE'
+                            });
+                            if (response.ok) {
+                                loadOntologies();
+                                showStatus('success', `Ontology '${name}' deleted`);
+                            } else {
+                                const data = await response.json();
+                                showStatus('error', data.detail || 'Failed to delete');
+                            }
+                        } catch (error) {
+                            showStatus('error', 'Network error');
+                        }
+                    }
+                });
+            });
+
+        } catch (error) {
+            console.error('Failed to load ontologies:', error);
+            ontologiesList.innerHTML = '<p style="color: #ff4444;">Failed to load ontologies</p>';
+        }
+    }
+
+    function showStatus(type, message) {
+        uploadStatus.className = `upload-status ${type}`;
+        uploadStatus.textContent = message;
+        setTimeout(() => {
+            uploadStatus.className = 'upload-status';
+        }, 5000);
+    }
+});
+</script>
 {% endblock %}

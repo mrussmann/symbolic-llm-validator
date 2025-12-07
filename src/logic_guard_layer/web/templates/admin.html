@@ -1,0 +1,332 @@
+{% extends "base.html" %}
+
+{% block title %}Admin - Logic-Guard-Layer{% endblock %}
+
+{% block extra_css %}
+<style>
+    .admin-container {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    .admin-header {
+        text-align: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid var(--terminal-green);
+    }
+
+    .admin-header h1 {
+        color: var(--terminal-amber);
+        margin: 0;
+    }
+
+    .user-info {
+        margin-top: 0.5rem;
+        font-size: 0.9rem;
+        color: var(--terminal-green-dim);
+    }
+
+    .user-info .username {
+        color: var(--terminal-green);
+        font-weight: bold;
+    }
+
+    .logout-link {
+        color: var(--terminal-amber);
+        text-decoration: none;
+    }
+
+    .logout-link:hover {
+        text-shadow: 0 0 10px var(--terminal-amber);
+    }
+
+    .status-card {
+        background: rgba(0, 50, 0, 0.3);
+        border: 1px solid var(--terminal-green);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .status-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+        border-bottom: 1px dashed var(--terminal-green-dim);
+    }
+
+    .status-row:last-child {
+        border-bottom: none;
+    }
+
+    .status-label {
+        color: var(--terminal-green-dim);
+    }
+
+    .status-value {
+        font-weight: bold;
+    }
+
+    .status-enabled {
+        color: var(--terminal-green);
+    }
+
+    .status-disabled {
+        color: #ff4444;
+    }
+
+    .control-card {
+        background: rgba(0, 50, 0, 0.3);
+        border: 1px solid var(--terminal-green);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .control-title {
+        color: var(--terminal-amber);
+        margin-bottom: 1rem;
+        font-size: 1.1rem;
+    }
+
+    .control-description {
+        color: var(--terminal-green-dim);
+        margin-bottom: 1rem;
+        font-size: 0.9rem;
+    }
+
+    .control-buttons {
+        display: flex;
+        gap: 1rem;
+    }
+
+    .admin-btn {
+        background: transparent;
+        border: 2px solid var(--terminal-green);
+        color: var(--terminal-green);
+        padding: 0.8rem 2rem;
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .admin-btn:hover {
+        background: rgba(0, 255, 0, 0.1);
+        box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+    }
+
+    .admin-btn.btn-enable {
+        border-color: var(--terminal-green);
+        color: var(--terminal-green);
+    }
+
+    .admin-btn.btn-enable:hover {
+        background: rgba(0, 255, 0, 0.2);
+    }
+
+    .admin-btn.btn-disable {
+        border-color: #ff4444;
+        color: #ff4444;
+    }
+
+    .admin-btn.btn-disable:hover {
+        background: rgba(255, 68, 68, 0.2);
+        box-shadow: 0 0 15px rgba(255, 68, 68, 0.3);
+    }
+
+    .admin-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .status-indicator {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        margin-right: 0.5rem;
+        animation: pulse 2s infinite;
+    }
+
+    .status-indicator.enabled {
+        background: var(--terminal-green);
+        box-shadow: 0 0 10px var(--terminal-green);
+    }
+
+    .status-indicator.disabled {
+        background: #ff4444;
+        box-shadow: 0 0 10px #ff4444;
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+
+    .action-log {
+        margin-top: 1.5rem;
+        padding: 1rem;
+        background: rgba(0, 20, 0, 0.5);
+        border: 1px solid var(--terminal-green-dim);
+        max-height: 150px;
+        overflow-y: auto;
+        font-size: 0.85rem;
+    }
+
+    .log-entry {
+        color: var(--terminal-green-dim);
+        margin-bottom: 0.3rem;
+    }
+
+    .log-entry.success {
+        color: var(--terminal-green);
+    }
+
+    .log-entry.error {
+        color: #ff4444;
+    }
+
+    .warning-text {
+        color: var(--terminal-amber);
+        font-size: 0.85rem;
+        margin-top: 1rem;
+        padding: 0.5rem;
+        border: 1px dashed var(--terminal-amber);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="terminal-container admin-container">
+    <div class="admin-header">
+        <h1><span class="prompt">&gt;</span> ADMIN PANEL</h1>
+        <p class="hint-text">System Administration Interface</p>
+        <div class="user-info">
+            Logged in as: <span class="username">{{ username }}</span> |
+            <a href="/logout" class="logout-link">[LOGOUT]</a>
+        </div>
+    </div>
+
+    <!-- Status Card -->
+    <div class="status-card">
+        <h3><span class="prompt">&gt;</span> SYSTEM STATUS</h3>
+        <div class="status-row">
+            <span class="status-label">Public Access:</span>
+            <span class="status-value">
+                <span id="status-indicator" class="status-indicator {% if enabled_for_public %}enabled{% else %}disabled{% endif %}"></span>
+                <span id="status-text" class="{% if enabled_for_public %}status-enabled{% else %}status-disabled{% endif %}">
+                    {% if enabled_for_public %}ENABLED{% else %}DISABLED{% endif %}
+                </span>
+            </span>
+        </div>
+        <div class="status-row">
+            <span class="status-label">Version:</span>
+            <span class="status-value">v{{ version }}</span>
+        </div>
+        <div class="status-row">
+            <span class="status-label">Total Validations:</span>
+            <span class="status-value" id="validation-count">{{ validation_count }}</span>
+        </div>
+    </div>
+
+    <!-- Control Card -->
+    <div class="control-card">
+        <div class="control-title"><span class="prompt">&gt;</span> APPLICATION CONTROL</div>
+        <div class="control-description">
+            Enable or disable public access to the application. When disabled, non-authenticated users will receive a 503 Service Unavailable response. Admin users remain unaffected.
+        </div>
+        <div class="control-buttons">
+            <button id="btn-enable" class="admin-btn btn-enable" {% if enabled_for_public %}disabled{% endif %}>[ENABLE PUBLIC ACCESS]</button>
+            <button id="btn-disable" class="admin-btn btn-disable" {% if not enabled_for_public %}disabled{% endif %}>[DISABLE PUBLIC ACCESS]</button>
+        </div>
+        <div class="warning-text">
+            Warning: Disabling public access will block validation requests for non-authenticated users. Admin users will still have access.
+        </div>
+    </div>
+
+    <!-- Action Log -->
+    <div class="action-log" id="action-log">
+        <div class="log-entry">&gt; Admin panel loaded</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const btnEnable = document.getElementById('btn-enable');
+    const btnDisable = document.getElementById('btn-disable');
+    const statusIndicator = document.getElementById('status-indicator');
+    const statusText = document.getElementById('status-text');
+    const actionLog = document.getElementById('action-log');
+
+    function log(message, type = '') {
+        const entry = document.createElement('div');
+        entry.className = `log-entry ${type}`;
+        const time = new Date().toLocaleTimeString();
+        entry.textContent = `[${time}] ${message}`;
+        actionLog.appendChild(entry);
+        actionLog.scrollTop = actionLog.scrollHeight;
+    }
+
+    function updateUI(enabled) {
+        statusIndicator.className = `status-indicator ${enabled ? 'enabled' : 'disabled'}`;
+        statusText.className = enabled ? 'status-enabled' : 'status-disabled';
+        statusText.textContent = enabled ? 'ENABLED' : 'DISABLED';
+        btnEnable.disabled = enabled;
+        btnDisable.disabled = !enabled;
+    }
+
+    btnEnable.addEventListener('click', async function() {
+        log('Enabling public access...');
+        try {
+            const response = await fetch('/api/admin/enable', { method: 'POST' });
+            if (response.ok) {
+                const data = await response.json();
+                updateUI(true);
+                log('Public access ENABLED successfully', 'success');
+            } else {
+                log('Failed to enable public access', 'error');
+            }
+        } catch (error) {
+            log('Network error: ' + error.message, 'error');
+        }
+    });
+
+    btnDisable.addEventListener('click', async function() {
+        if (!confirm('Are you sure you want to disable public access? Non-authenticated users will be blocked.')) {
+            log('Disable cancelled by user');
+            return;
+        }
+        log('Disabling public access...');
+        try {
+            const response = await fetch('/api/admin/disable', { method: 'POST' });
+            if (response.ok) {
+                const data = await response.json();
+                updateUI(false);
+                log('Public access DISABLED successfully', 'success');
+            } else {
+                log('Failed to disable public access', 'error');
+            }
+        } catch (error) {
+            log('Network error: ' + error.message, 'error');
+        }
+    });
+
+    // Refresh status periodically
+    setInterval(async function() {
+        try {
+            const response = await fetch('/api/admin/status');
+            if (response.ok) {
+                const data = await response.json();
+                updateUI(data.enabled_for_public);
+                document.getElementById('validation-count').textContent = data.validation_count;
+            }
+        } catch (error) {
+            // Silent fail for background refresh
+        }
+    }, 10000);
+});
+</script>
+{% endblock %}

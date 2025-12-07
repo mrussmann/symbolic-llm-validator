@@ -1,10 +1,13 @@
 """Constraint definitions for ontology validation."""
 
+import logging
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable, Optional
 
 from logic_guard_layer.models.responses import Violation, ViolationType
+
+logger = logging.getLogger(__name__)
 
 
 class ConstraintType(str, Enum):
@@ -30,7 +33,8 @@ class Constraint:
 
 def check_operating_hours_non_negative(data: dict) -> Optional[Violation]:
     """Check that operating hours are non-negative."""
-    hours = data.get("betriebsstunden") or data.get("operating_hours")
+    hours = data.get("operating_hours") or data.get("betriebsstunden")
+    logger.debug(f"Checking operating hours: {hours}")
     if hours is not None and hours < 0:
         return Violation(
             type=ViolationType.RANGE_ERROR,
@@ -45,7 +49,8 @@ def check_operating_hours_non_negative(data: dict) -> Optional[Violation]:
 
 def check_max_lifespan_positive(data: dict) -> Optional[Violation]:
     """Check that max lifespan is positive."""
-    lifespan = data.get("max_lebensdauer") or data.get("max_lifespan")
+    lifespan = data.get("max_lifespan") or data.get("max_lebensdauer")
+    logger.debug(f"Checking max lifespan: {lifespan}")
     if lifespan is not None and lifespan <= 0:
         return Violation(
             type=ViolationType.RANGE_ERROR,
@@ -60,7 +65,8 @@ def check_max_lifespan_positive(data: dict) -> Optional[Violation]:
 
 def check_maintenance_interval_positive(data: dict) -> Optional[Violation]:
     """Check that maintenance interval is positive."""
-    interval = data.get("wartungsintervall") or data.get("maintenance_interval")
+    interval = data.get("maintenance_interval") or data.get("wartungsintervall")
+    logger.debug(f"Checking maintenance interval: {interval}")
     if interval is not None and interval <= 0:
         return Violation(
             type=ViolationType.RANGE_ERROR,
@@ -75,8 +81,9 @@ def check_maintenance_interval_positive(data: dict) -> Optional[Violation]:
 
 def check_maintenance_interval_vs_lifespan(data: dict) -> Optional[Violation]:
     """Check that maintenance interval does not exceed max lifespan."""
-    interval = data.get("wartungsintervall") or data.get("maintenance_interval")
-    lifespan = data.get("max_lebensdauer") or data.get("max_lifespan")
+    interval = data.get("maintenance_interval") or data.get("wartungsintervall")
+    lifespan = data.get("max_lifespan") or data.get("max_lebensdauer")
+    logger.debug(f"Checking interval ({interval}) vs lifespan ({lifespan})")
 
     if interval is not None and lifespan is not None and interval > lifespan:
         return Violation(
@@ -92,10 +99,12 @@ def check_maintenance_interval_vs_lifespan(data: dict) -> Optional[Violation]:
 
 def check_operating_hours_vs_lifespan(data: dict) -> Optional[Violation]:
     """Check that operating hours do not exceed max lifespan."""
-    hours = data.get("betriebsstunden") or data.get("operating_hours")
-    lifespan = data.get("max_lebensdauer") or data.get("max_lifespan")
+    hours = data.get("operating_hours") or data.get("betriebsstunden")
+    lifespan = data.get("max_lifespan") or data.get("max_lebensdauer")
+    logger.info(f"Checking operating hours ({hours}) vs lifespan ({lifespan})")
 
     if hours is not None and lifespan is not None and hours > lifespan:
+        logger.info(f"VIOLATION: hours {hours} > lifespan {lifespan}")
         return Violation(
             type=ViolationType.RELATIONAL_ERROR,
             constraint="operating_hours <= max_lifespan",
@@ -109,7 +118,8 @@ def check_operating_hours_vs_lifespan(data: dict) -> Optional[Violation]:
 
 def check_pressure_range(data: dict) -> Optional[Violation]:
     """Check that pressure is within valid range for hydraulics (0-350 bar)."""
-    pressure = data.get("druck_bar") or data.get("pressure_bar") or data.get("druck")
+    pressure = data.get("pressure_bar") or data.get("druck_bar") or data.get("druck")
+    logger.info(f"Checking pressure: {pressure}")
 
     if pressure is not None:
         if pressure < 0:
@@ -122,6 +132,7 @@ def check_pressure_range(data: dict) -> Optional[Violation]:
                 expected_value=">= 0 bar",
             )
         if pressure > 350:
+            logger.info(f"VIOLATION: pressure {pressure} > 350")
             return Violation(
                 type=ViolationType.RANGE_ERROR,
                 constraint="0 <= pressure_bar <= 350",
@@ -135,7 +146,8 @@ def check_pressure_range(data: dict) -> Optional[Violation]:
 
 def check_temperature_range(data: dict) -> Optional[Violation]:
     """Check that temperature is within valid range (-40 to 150°C)."""
-    temp = data.get("temperatur_c") or data.get("temperature_c") or data.get("temperatur")
+    temp = data.get("temperature_c") or data.get("temperatur_c") or data.get("temperatur")
+    logger.info(f"Checking temperature: {temp}")
 
     if temp is not None:
         if temp < -40:
@@ -148,6 +160,7 @@ def check_temperature_range(data: dict) -> Optional[Violation]:
                 expected_value=">= -40°C",
             )
         if temp > 150:
+            logger.info(f"VIOLATION: temperature {temp} > 150")
             return Violation(
                 type=ViolationType.RANGE_ERROR,
                 constraint="-40 <= temperature_c <= 150",

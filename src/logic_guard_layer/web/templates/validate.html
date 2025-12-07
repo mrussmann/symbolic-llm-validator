@@ -2,6 +2,221 @@
 
 {% block title %}Logic-Guard-Layer - Validate{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* Smaller textarea */
+    #input-text {
+        min-height: 120px !important;
+        height: 120px;
+    }
+
+    /* Execute button - orange */
+    #submit-btn {
+        background-color: #ffb000 !important;
+        border-color: #ffb000 !important;
+        color: #0a0a0a !important;
+        text-shadow: none !important;
+    }
+    #submit-btn:hover {
+        background-color: #ffcc33 !important;
+        border-color: #ffcc33 !important;
+    }
+    #submit-btn .button-icon {
+        color: #0a0a0a !important;
+    }
+
+    /* Clear button - visible border */
+    #clear-btn {
+        background-color: #0a0a0a !important;
+        border: 2px solid #00cc33 !important;
+        color: #00cc33 !important;
+    }
+    #clear-btn:hover {
+        border-color: #33ff66 !important;
+        color: #33ff66 !important;
+        background-color: rgba(0, 255, 65, 0.1) !important;
+    }
+
+    /* Dropdown styling */
+    #sample-select {
+        width: 100%;
+        padding: 0.5rem 1rem;
+        background-color: #0a0a0a;
+        border: 1px solid #00cc33;
+        color: #00ff41;
+        font-family: 'VT323', 'Share Tech Mono', 'Courier New', monospace;
+        font-size: 18px;
+        cursor: pointer;
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2300ff41' d='M2 4l4 4 4-4z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 0.5rem center;
+        padding-right: 2rem;
+    }
+    #sample-select:focus {
+        outline: none;
+        border-color: #33ff66;
+        box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+    }
+    #sample-select option {
+        background-color: #0a0a0a;
+        color: #00ff41;
+        padding: 0.5rem;
+    }
+
+    /* Form row layout */
+    .form-row {
+        display: flex;
+        gap: 1.5rem;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+    .sample-group {
+        flex: 1;
+        margin-bottom: 0;
+    }
+    .form-row .form-options {
+        margin-bottom: 0;
+        display: flex;
+        align-items: center;
+    }
+
+    /* Centered loading indicator */
+    .loading {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 3rem;
+        text-align: center;
+    }
+    .loading.hidden {
+        display: none !important;
+    }
+
+    /* Warning status box (for corrected text) */
+    .status-box.warning {
+        border-color: #ffb000;
+        background-color: rgba(255, 176, 0, 0.1);
+        color: #ffb000;
+    }
+
+    /* Fixed violation cards (shown with strikethrough) */
+    .violation-card.fixed {
+        border-color: #ffb000;
+        background-color: rgba(255, 176, 0, 0.05);
+        opacity: 0.8;
+    }
+    .violation-card.fixed .violation-type {
+        color: #ffb000;
+    }
+    .violation-card.fixed .violation-message {
+        text-decoration: line-through;
+        color: #888;
+    }
+
+    /* Progress container */
+    .progress-container {
+        margin: 1.5rem 0;
+        padding: 1rem;
+        border: 1px solid #00cc33;
+        background-color: rgba(0, 0, 0, 0.3);
+    }
+    .progress-container.hidden {
+        display: none;
+    }
+    .progress-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #006622;
+    }
+    .progress-bar-container {
+        flex: 1;
+        height: 8px;
+        background-color: #0a0a0a;
+        border: 1px solid #006622;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    .progress-bar {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, #00cc33, #00ff41);
+        transition: width 0.3s ease;
+        box-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
+    }
+    .progress-steps {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    .progress-step {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        padding: 0.25rem 0;
+        color: #006622;
+        font-size: 16px;
+    }
+    .progress-step.running {
+        color: #00ff41;
+    }
+    .progress-step.running .step-icon {
+        animation: blink 0.5s infinite;
+    }
+    .progress-step.done {
+        color: #00cc33;
+    }
+    .progress-step.done .step-icon {
+        color: #00ff41;
+    }
+    .progress-step.warning {
+        color: #ffb000;
+    }
+    .progress-step.skipped {
+        color: #666;
+        text-decoration: line-through;
+    }
+    .progress-step.error {
+        color: #ff3333;
+    }
+    .step-icon {
+        font-family: monospace;
+        min-width: 24px;
+    }
+    .step-name {
+        min-width: 160px;
+    }
+    .step-message {
+        flex: 1;
+        color: #888;
+        font-size: 14px;
+    }
+    .progress-step.running .step-message,
+    .progress-step.done .step-message {
+        color: inherit;
+        opacity: 0.8;
+    }
+    @keyframes blink {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.3; }
+    }
+
+    @media (max-width: 768px) {
+        .form-row {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 1rem;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="terminal-container">
     <div class="terminal-header">
@@ -16,28 +231,71 @@
                     placeholder="Enter technical maintenance text here...&#10;&#10;Example: Motor M1 has 15,000 operating hours with a maximum lifespan of 20,000 hours. The pressure is 250 bar."></textarea>
             </div>
 
-            <div class="form-options">
-                <label class="terminal-checkbox">
-                    <input type="checkbox" id="auto-correct" name="auto_correct" checked>
-                    <span class="checkmark"></span>
-                    Auto-correct errors
-                </label>
+            <div class="form-row">
+                <div class="sample-group">
+                    <select id="sample-select" class="terminal-select">
+                        <option value="">-- Load a sample --</option>
+                        <option value="valid">Valid Text (no errors)</option>
+                        <option value="exceeded-hours">Exceeded Operating Hours</option>
+                        <option value="pressure-violation">Pressure Violation</option>
+                        <option value="multiple-errors">Multiple Errors</option>
+                    </select>
+                </div>
+
+                <div class="form-options">
+                    <label class="terminal-checkbox">
+                        <input type="checkbox" id="auto-correct" name="auto_correct" checked>
+                        <span class="checkmark"></span>
+                        Auto-correct errors
+                    </label>
+                </div>
             </div>
 
             <div class="form-actions">
-                <button type="submit" class="terminal-button primary" id="submit-btn">
+                <button type="submit" class="terminal-button execute" id="submit-btn">
                     <span class="button-icon">&gt;</span> EXECUTE VALIDATION
                 </button>
-                <button type="button" class="terminal-button" id="clear-btn">
+                <button type="button" class="terminal-button secondary" id="clear-btn">
                     <span class="button-icon">&gt;</span> CLEAR
                 </button>
             </div>
         </form>
 
-        <!-- Loading indicator -->
-        <div id="loading" class="loading hidden">
-            <div class="loading-spinner"></div>
-            <p>Processing... <span class="blink">_</span></p>
+        <!-- Progress indicator -->
+        <div id="progress-container" class="progress-container hidden">
+            <div class="progress-header">
+                <span class="prompt">&gt;</span> PROCESSING PIPELINE
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="progress-bar"></div>
+                </div>
+            </div>
+            <div class="progress-steps" id="progress-steps">
+                <div class="progress-step" data-step="init">
+                    <span class="step-icon">[ ]</span>
+                    <span class="step-name">Initialize</span>
+                    <span class="step-message"></span>
+                </div>
+                <div class="progress-step" data-step="parse">
+                    <span class="step-icon">[ ]</span>
+                    <span class="step-name">Parse Text</span>
+                    <span class="step-message"></span>
+                </div>
+                <div class="progress-step" data-step="validate">
+                    <span class="step-icon">[ ]</span>
+                    <span class="step-name">Validate Constraints</span>
+                    <span class="step-message"></span>
+                </div>
+                <div class="progress-step" data-step="correct">
+                    <span class="step-icon">[ ]</span>
+                    <span class="step-name">Auto-Correct</span>
+                    <span class="step-message"></span>
+                </div>
+                <div class="progress-step" data-step="complete">
+                    <span class="step-icon">[ ]</span>
+                    <span class="step-name">Complete</span>
+                    <span class="step-message"></span>
+                </div>
+            </div>
         </div>
 
         <!-- Results section -->
@@ -83,7 +341,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const inputText = document.getElementById('input-text');
     const submitBtn = document.getElementById('submit-btn');
     const clearBtn = document.getElementById('clear-btn');
-    const loading = document.getElementById('loading');
+    const progressContainer = document.getElementById('progress-container');
+    const progressBar = document.getElementById('progress-bar');
+    const progressSteps = document.getElementById('progress-steps');
     const results = document.getElementById('results');
     const resultStatus = document.getElementById('result-status');
     const violationsContainer = document.getElementById('violations-container');
@@ -92,6 +352,72 @@ document.addEventListener('DOMContentLoaded', function() {
     const correctedText = document.getElementById('corrected-text');
     const iterationsEl = document.getElementById('iterations');
     const processingTimeEl = document.getElementById('processing-time');
+
+    // Sample texts for demonstration
+    const sampleTexts = {
+        'valid': 'Component: Motor M1. Operating hours: 15000. Maximum lifespan: 20000 hours. Pressure: 250 bar. Temperature: 75°C. Status: active.',
+        'exceeded-hours': 'Component: Motor M1. Operating hours: 25000. Maximum lifespan: 20000 hours. Status: active. Note: Motor is still running despite exceeding its expected lifespan.',
+        'pressure-violation': 'Component: Hydraulic Pump HP-01. Pressure: 450 bar. Temperature: 80°C. Status: warning. Note: Pressure exceeds safe operating limits.',
+        'multiple-errors': 'Component: Motor M2. Operating hours: 30000. Maximum lifespan: 20000 hours. Pressure: 500 bar. Temperature: 180°C. Status: critical.'
+    };
+
+    // Handle sample dropdown change
+    const sampleSelect = document.getElementById('sample-select');
+    sampleSelect.addEventListener('change', function() {
+        const sampleKey = this.value;
+        if (sampleKey && sampleTexts[sampleKey]) {
+            inputText.value = sampleTexts[sampleKey];
+            results.classList.add('hidden');
+            progressContainer.classList.add('hidden');
+        }
+    });
+
+    // Reset progress UI
+    function resetProgress() {
+        progressBar.style.width = '0%';
+        progressSteps.querySelectorAll('.progress-step').forEach(step => {
+            step.className = 'progress-step';
+            step.querySelector('.step-icon').textContent = '[ ]';
+            step.querySelector('.step-message').textContent = '';
+        });
+    }
+
+    // Update a specific step
+    function updateStep(stepName, status, message) {
+        const step = progressSteps.querySelector(`[data-step="${stepName}"]`);
+        if (!step) return;
+
+        // Remove all status classes
+        step.classList.remove('running', 'done', 'warning', 'skipped', 'error');
+        step.classList.add(status);
+
+        // Update icon
+        const icon = step.querySelector('.step-icon');
+        switch (status) {
+            case 'running':
+                icon.textContent = '[●]';
+                break;
+            case 'done':
+                icon.textContent = '[✓]';
+                break;
+            case 'warning':
+                icon.textContent = '[!]';
+                break;
+            case 'skipped':
+                icon.textContent = '[-]';
+                break;
+            case 'error':
+                icon.textContent = '[✗]';
+                break;
+            default:
+                icon.textContent = '[ ]';
+        }
+
+        // Update message
+        if (message) {
+            step.querySelector('.step-message').textContent = message;
+        }
+    }
 
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -102,16 +428,19 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // Show loading
+        // Show progress, hide results
         submitBtn.disabled = true;
-        loading.classList.remove('hidden');
+        resetProgress();
+        progressContainer.classList.remove('hidden');
         results.classList.add('hidden');
 
         try {
-            const response = await fetch('/api/validate', {
+            // Use SSE for streaming progress
+            const response = await fetch('/api/validate/stream', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Accept': 'text/event-stream',
                 },
                 body: JSON.stringify({
                     text: text,
@@ -119,43 +448,104 @@ document.addEventListener('DOMContentLoaded', function() {
                 }),
             });
 
-            const data = await response.json();
-
             if (!response.ok) {
-                throw new Error(data.detail || 'Validation failed');
+                throw new Error('Validation request failed');
             }
 
-            // Display results
-            displayResults(data);
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop(); // Keep incomplete line in buffer
+
+                for (const line of lines) {
+                    if (line.startsWith('event:')) {
+                        // Store event type for next data line
+                        currentEvent = line.substring(6).trim();
+                    } else if (line.startsWith('data:')) {
+                        const jsonStr = line.substring(5).trim();
+                        if (jsonStr) {
+                            try {
+                                const data = JSON.parse(jsonStr);
+                                handleSSEEvent(currentEvent || 'progress', data);
+                            } catch (e) {
+                                console.error('Failed to parse SSE data:', e);
+                            }
+                        }
+                    }
+                }
+            }
 
         } catch (error) {
+            console.error('Validation error:', error);
+            updateStep('complete', 'error', error.message);
             resultStatus.innerHTML = `<div class="status-box error">[ERROR] ${error.message}</div>`;
             results.classList.remove('hidden');
         } finally {
             submitBtn.disabled = false;
-            loading.classList.add('hidden');
         }
     });
+
+    let currentEvent = 'progress';
+
+    function handleSSEEvent(eventType, data) {
+        if (eventType === 'progress') {
+            // Update progress bar
+            if (data.progress !== undefined) {
+                progressBar.style.width = data.progress + '%';
+            }
+
+            // Update step
+            if (data.step && data.status) {
+                updateStep(data.step, data.status, data.message);
+            }
+        } else if (eventType === 'result') {
+            // Final result received
+            displayResults(data);
+        } else if (eventType === 'error') {
+            updateStep('complete', 'error', data.message);
+            resultStatus.innerHTML = `<div class="status-box error">[ERROR] ${data.message}</div>`;
+            results.classList.remove('hidden');
+        }
+    }
 
     clearBtn.addEventListener('click', function() {
         inputText.value = '';
         results.classList.add('hidden');
+        progressContainer.classList.add('hidden');
     });
 
     function displayResults(data) {
-        const result = data.result;
-
-        // Status
-        if (result.is_valid) {
+        // Status - distinguish between originally valid, corrected, and still invalid
+        if (data.success && !data.corrected_text) {
+            // Originally valid, no changes needed
             resultStatus.innerHTML = '<div class="status-box success">[OK] TEXT IS CONSISTENT - ALL CONSTRAINTS SATISFIED</div>';
+        } else if (data.success && data.corrected_text) {
+            // Had violations but was corrected successfully
+            resultStatus.innerHTML = '<div class="status-box warning">[CORRECTED] VIOLATIONS WERE FOUND AND AUTO-CORRECTED</div>';
         } else {
-            resultStatus.innerHTML = `<div class="status-box error">[ERROR] FOUND ${result.violations.length} CONSTRAINT VIOLATION(S)</div>`;
+            // Still has violations (couldn't be corrected)
+            resultStatus.innerHTML = `<div class="status-box error">[ERROR] FOUND ${data.violations.length} CONSTRAINT VIOLATION(S)</div>`;
         }
 
-        // Violations
-        if (result.violations && result.violations.length > 0) {
-            violationsList.innerHTML = result.violations.map(v => `
-                <div class="violation-card">
+        // Violations - show original violations if text was corrected, otherwise show final violations
+        const violationsToShow = (data.corrected_text && data.original_violations && data.original_violations.length > 0)
+            ? data.original_violations
+            : data.violations;
+
+        if (violationsToShow && violationsToShow.length > 0) {
+            const headerText = data.corrected_text
+                ? 'ORIGINAL CONSTRAINT VIOLATIONS (FIXED):'
+                : 'CONSTRAINT VIOLATIONS:';
+            violationsContainer.querySelector('h4').innerHTML = `<span class="prompt">&gt;</span> ${headerText}`;
+            violationsList.innerHTML = violationsToShow.map(v => `
+                <div class="violation-card${data.corrected_text ? ' fixed' : ''}">
                     <div class="violation-type">[${v.type}]</div>
                     <div class="violation-message">${v.message}</div>
                     <div class="violation-details">
@@ -172,15 +562,15 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Corrected text
-        if (result.corrected_text) {
-            correctedText.textContent = result.corrected_text;
+        if (data.corrected_text) {
+            correctedText.textContent = data.corrected_text;
             correctedContainer.classList.remove('hidden');
         } else {
             correctedContainer.classList.add('hidden');
         }
 
         // Metrics
-        iterationsEl.textContent = result.iterations || 1;
+        iterationsEl.textContent = data.iterations || 1;
         processingTimeEl.textContent = data.processing_time_ms.toFixed(2);
 
         results.classList.remove('hidden');

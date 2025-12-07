@@ -81,29 +81,33 @@ class SemanticParser:
         components = []
         raw_values = {}
 
-        # Extract component data
-        component_data = raw_data.get("komponente", {})
+        logger.info(f"Converting raw LLM data: {raw_data}")
+
+        # Extract component data (support both English and German keys)
+        component_data = raw_data.get("component") or raw_data.get("komponente", {})
         if component_data:
+            logger.info(f"Found component data: {component_data}")
             component = self._create_component(component_data)
             if component:
                 components.append(component)
-            raw_values["komponente"] = component_data
+            raw_values["component"] = component_data
 
-        # Extract measurements
-        measurements = raw_data.get("messwerte", [])
+        # Extract measurements (support both English and German keys)
+        measurements = raw_data.get("measurements") or raw_data.get("messwerte", [])
         if measurements and components:
             for m in measurements:
                 measurement = Measurement(
-                    type=m.get("typ", "unknown"),
-                    value=m.get("wert", 0),
-                    unit=m.get("einheit", "")
+                    type=m.get("type") or m.get("typ", "unknown"),
+                    value=m.get("value") or m.get("wert", 0),
+                    unit=m.get("unit") or m.get("einheit", "")
                 )
                 components[0].measurements.append(measurement)
-        raw_values["messwerte"] = measurements
+        raw_values["measurements"] = measurements
 
-        # Store maintenance info
-        if "wartung" in raw_data:
-            raw_values["wartung"] = raw_data["wartung"]
+        # Store maintenance info (support both English and German keys)
+        maintenance_data = raw_data.get("maintenance") or raw_data.get("wartung")
+        if maintenance_data:
+            raw_values["maintenance"] = maintenance_data
 
         return ParsedData(
             components=components,
@@ -124,32 +128,56 @@ class SemanticParser:
         if not data.get("name"):
             return None
 
-        # Map component type
-        type_str = data.get("typ", "Unbekannt")
+        # Map component type (support both English and German keys)
+        type_str = data.get("type") or data.get("typ", "Unknown")
         try:
             component_type = ComponentType(type_str)
         except ValueError:
             # Try to match partially
             type_map = {
                 "motor": ComponentType.MOTOR,
+                "electricmotor": ComponentType.MOTOR,
                 "elektromotor": ComponentType.MOTOR,
+                "pump": ComponentType.PUMP,
                 "pumpe": ComponentType.PUMP,
+                "hydraulicpump": ComponentType.HYDRAULIC_PUMP,
                 "hydraulikpumpe": ComponentType.HYDRAULIC_PUMP,
                 "hydraulik": ComponentType.HYDRAULIC_PUMP,
+                "valve": ComponentType.VALVE,
                 "ventil": ComponentType.VALVE,
                 "sensor": ComponentType.SENSOR,
+                "pressuresensor": ComponentType.PRESSURE_SENSOR,
                 "drucksensor": ComponentType.PRESSURE_SENSOR,
+                "temperaturesensor": ComponentType.TEMPERATURE_SENSOR,
                 "temperatursensor": ComponentType.TEMPERATURE_SENSOR,
             }
-            component_type = type_map.get(type_str.lower(), ComponentType.UNKNOWN)
+            component_type = type_map.get(type_str.lower().replace(" ", ""), ComponentType.UNKNOWN)
+
+        # Get operating hours (English or German key)
+        operating_hours = self._safe_int(
+            data.get("operating_hours") or data.get("betriebsstunden")
+        )
+        # Get max lifespan (English or German key)
+        max_lifespan = self._safe_int(
+            data.get("max_lifespan") or data.get("max_lebensdauer")
+        )
+        # Get maintenance interval (English or German key)
+        maintenance_interval = self._safe_int(
+            data.get("maintenance_interval") or data.get("wartungsintervall")
+        )
+        # Get serial number (English or German key)
+        serial_number = data.get("serial_number") or data.get("seriennummer")
+
+        logger.info(f"Created component: name={data.get('name')}, type={component_type}, "
+                   f"hours={operating_hours}, lifespan={max_lifespan}")
 
         return Component(
             name=data.get("name", ""),
             type=component_type,
-            serial_number=data.get("seriennummer"),
-            operating_hours=self._safe_int(data.get("betriebsstunden")),
-            max_lifespan=self._safe_int(data.get("max_lebensdauer")),
-            maintenance_interval=self._safe_int(data.get("wartungsintervall")),
+            serial_number=serial_number,
+            operating_hours=operating_hours,
+            max_lifespan=max_lifespan,
+            maintenance_interval=maintenance_interval,
             measurements=[],
         )
 
@@ -190,27 +218,51 @@ class SemanticParser:
 
             if comp.operating_hours is not None:
                 values["betriebsstunden"] = comp.operating_hours
+                values["operating_hours"] = comp.operating_hours
             if comp.max_lifespan is not None:
                 values["max_lebensdauer"] = comp.max_lifespan
+                values["max_lifespan"] = comp.max_lifespan
             if comp.maintenance_interval is not None:
                 values["wartungsintervall"] = comp.maintenance_interval
+                values["maintenance_interval"] = comp.maintenance_interval
             if comp.serial_number:
                 values["seriennummer"] = comp.serial_number
 
             # Extract from measurements
             for m in comp.measurements:
-                if m.type.lower() == "druck" or "druck" in m.type.lower():
+                m_type = m.type.lower()
+                if "druck" in m_type or "pressure" in m_type:
                     values["druck_bar"] = m.value
-                elif m.type.lower() == "temperatur" or "temp" in m.type.lower():
+                    values["pressure_bar"] = m.value
+                elif "temperatur" in m_type or "temp" in m_type:
                     values["temperatur_c"] = m.value
-                elif m.type.lower() == "drehzahl" or "rpm" in m.type.lower():
+                    values["temperature_c"] = m.value
+                elif "drehzahl" in m_type or "rpm" in m_type:
                     values["drehzahl"] = m.value
+                    values["rpm"] = m.value
 
-        # Also get from raw values if available
-        raw_komp = parsed_data.raw_values.get("komponente", {})
-        if raw_komp:
-            for key in ["druck_bar", "temperatur_c", "drehzahl", "status"]:
-                if key in raw_komp and raw_komp[key] is not None:
-                    values[key] = raw_komp[key]
+        # Also get from raw values if available (support both English and German)
+        raw_comp = parsed_data.raw_values.get("component") or parsed_data.raw_values.get("komponente", {})
+        if raw_comp:
+            # Pressure
+            pressure = raw_comp.get("pressure_bar") or raw_comp.get("druck_bar")
+            if pressure is not None:
+                values["druck_bar"] = pressure
+                values["pressure_bar"] = pressure
+            # Temperature
+            temp = raw_comp.get("temperature_c") or raw_comp.get("temperatur_c")
+            if temp is not None:
+                values["temperatur_c"] = temp
+                values["temperature_c"] = temp
+            # RPM
+            rpm = raw_comp.get("rpm") or raw_comp.get("drehzahl")
+            if rpm is not None:
+                values["drehzahl"] = rpm
+                values["rpm"] = rpm
+            # Status
+            status = raw_comp.get("status")
+            if status is not None:
+                values["status"] = status
 
+        logger.info(f"Extracted raw values for constraint checking: {values}")
         return values
