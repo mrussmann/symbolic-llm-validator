@@ -338,33 +338,41 @@ class OntologyVisualization {
             p.domain.some(d => d === node.original_id || d === node.id)
         );
 
+        // Escape all user-controlled data
+        const safeId = this.escapeHtml(node.id);
+        const safeType = this.escapeHtml(node.type);
+        const safeCategory = this.escapeHtml(node.category);
+        const safeParent = this.escapeHtml(node.parent);
+        const safeChildren = node.children ? node.children.map(c => this.escapeHtml(c)).join(', ') : '';
+        const safeDescription = this.escapeHtml(node.description);
+
         let html = `
             <div class="detail-section">
-                <div class="detail-title">${node.id}</div>
+                <div class="detail-title">${safeId}</div>
                 <div class="detail-row">
                     <span class="detail-label">Type:</span>
-                    <span class="detail-value">${node.type}</span>
+                    <span class="detail-value">${safeType}</span>
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Category:</span>
-                    <span class="detail-value category-${node.category}">${node.category}</span>
+                    <span class="detail-value category-${safeCategory}">${safeCategory}</span>
                 </div>
                 ${node.parent ? `
                 <div class="detail-row">
                     <span class="detail-label">Parent:</span>
-                    <span class="detail-value">${node.parent}</span>
+                    <span class="detail-value">${safeParent}</span>
                 </div>
                 ` : ''}
                 ${node.children && node.children.length > 0 ? `
                 <div class="detail-row">
                     <span class="detail-label">Children:</span>
-                    <span class="detail-value">${node.children.join(', ')}</span>
+                    <span class="detail-value">${safeChildren}</span>
                 </div>
                 ` : ''}
                 ${node.description ? `
                 <div class="detail-row">
                     <span class="detail-label">Description:</span>
-                    <span class="detail-value">${node.description}</span>
+                    <span class="detail-value">${safeDescription}</span>
                 </div>
                 ` : ''}
             </div>
@@ -376,8 +384,8 @@ class OntologyVisualization {
                     <div class="detail-subtitle">Properties</div>
                     ${properties.map(p => `
                         <div class="detail-row">
-                            <span class="detail-label">${p.id}:</span>
-                            <span class="detail-value">${p.range}</span>
+                            <span class="detail-label">${this.escapeHtml(p.id)}:</span>
+                            <span class="detail-value">${this.escapeHtml(p.range)}</span>
                         </div>
                     `).join('')}
                 </div>
@@ -390,8 +398,8 @@ class OntologyVisualization {
                     <div class="detail-subtitle">Related Constraints</div>
                     ${relatedConstraints.map(c => `
                         <div class="constraint-item">
-                            <div class="constraint-id">[${c.id}] ${c.name}</div>
-                            <div class="constraint-expr">${c.expression}</div>
+                            <div class="constraint-id">[${this.escapeHtml(c.id)}] ${this.escapeHtml(c.name)}</div>
+                            <div class="constraint-expr">${this.escapeHtml(c.expression)}</div>
                         </div>
                     `).join('')}
                 </div>
@@ -449,9 +457,13 @@ class OntologyVisualization {
             const prefix = depth === 0 ? '' : (node === roots[roots.length - 1] ? '\\-- ' : '+-- ');
             const children = nodes.filter(n => n.parent === node.id);
 
-            let html = `<div class="tree-node category-${node.category}">`;
+            // Use escapeHtml for user-controlled data
+            const safeCategory = this.escapeHtml(node.category);
+            const safeId = this.escapeHtml(node.id);
+
+            let html = `<div class="tree-node category-${safeCategory}">`;
             html += `<span class="tree-indent">${indent}${prefix}</span>`;
-            html += `<span class="tree-label" data-node-id="${node.id}">${node.id}</span>`;
+            html += `<span class="tree-label" data-node-id="${safeId}">${safeId}</span>`;
             html += `</div>`;
 
             children.forEach((child, i) => {
@@ -493,18 +505,19 @@ class OntologyVisualization {
         let html = '<div class="constraints-container">';
 
         for (const [type, constraints] of Object.entries(constraintsByType)) {
+            const safeType = this.escapeHtml(type.toUpperCase());
             html += `
                 <div class="constraint-group">
-                    <div class="constraint-type">${type.toUpperCase()} CONSTRAINTS</div>
+                    <div class="constraint-type">${safeType} CONSTRAINTS</div>
                     ${constraints.map(c => `
                         <div class="constraint-card">
                             <div class="constraint-header">
-                                <span class="constraint-id">[${c.id}]</span>
-                                <span class="constraint-name">${c.name}</span>
+                                <span class="constraint-id">[${this.escapeHtml(c.id)}]</span>
+                                <span class="constraint-name">${this.escapeHtml(c.name)}</span>
                             </div>
                             <div class="constraint-body">
-                                <div class="constraint-expr">${c.expression}</div>
-                                <div class="constraint-desc">${c.description}</div>
+                                <div class="constraint-expr">${this.escapeHtml(c.expression)}</div>
+                                <div class="constraint-desc">${this.escapeHtml(c.description)}</div>
                             </div>
                         </div>
                     `).join('')}
@@ -560,7 +573,21 @@ class OntologyVisualization {
 
     showError(message) {
         const panel = document.getElementById('panel-content');
-        panel.innerHTML = `<p class="error-text">ERROR: ${message}</p>`;
+        panel.innerHTML = '';
+        const errorP = document.createElement('p');
+        errorP.className = 'error-text';
+        errorP.textContent = 'ERROR: ' + message;
+        panel.appendChild(errorP);
+    }
+
+    /**
+     * Helper to safely escape HTML
+     */
+    escapeHtml(str) {
+        if (str === null || str === undefined) return '';
+        const div = document.createElement('div');
+        div.textContent = String(str);
+        return div.innerHTML;
     }
 }
 

@@ -404,20 +404,57 @@ C008: IF status = "active" THEN operating_hours < max_lifespan
                     </pre>
                 </div>
 
-                <h4>[5.3] Physical Constraints</h4>
+                <h4>[5.3] Physical Constraints (Thermodynamics & Fluid Mechanics)</h4>
                 <p>
-                    Enforce real-world physical laws and engineering limits:
+                    Enforce real-world physical laws and engineering limits based on fundamental physics:
                 </p>
                 <div class="example-box">
                     <div class="example-label">[PHYSICAL CONSTRAINT EXAMPLES]</div>
                     <pre>
-C009: IF component_type = "HydraulicPump" THEN pressure_bar <= 350
-C010: IF component_type = "VacuumPump" THEN pressure_bar <= 1
-C011: Temperature and pressure must be physically consistent
+<span class="highlight">First Law of Thermodynamics (Energy Conservation):</span>
+C009: 0% <= efficiency <= 100% (no perpetual motion)
+C010: P_output <= P_input × η
+
+<span class="highlight">Second Law of Thermodynamics (Carnot Limit):</span>
+C011: COP_HeatPump <= T_sink / (T_sink - T_source)
+
+<span class="highlight">Fluid Mechanics (Cavitation Prevention):</span>
+C012: NPSH_available > NPSH_required
+
+<span class="highlight">Isentropic Compression:</span>
+C013: T_out >= T_in × (P_ratio)^((γ-1)/γ)
+
+<span class="highlight">Heat Exchanger Energy Balance:</span>
+C014: Q_hot ≈ Q_cold (within 10% tolerance)
                     </pre>
                 </div>
 
-                <h4>[5.4] Violation Detection</h4>
+                <h4>[5.4] Energy Market Examples</h4>
+                <p>
+                    The system includes specialized constraints for industrial equipment:
+                </p>
+                <div class="example-box">
+                    <div class="example-label">[ENERGY MARKET EXAMPLES]</div>
+                    <pre>
+<span class="concept">Gas Turbine (Siemens H-Class):</span>
+  - Efficiency: max 63% (Combined Cycle)
+  - Brayton cycle efficiency limit
+
+<span class="concept">Heat Pump:</span>
+  - COP: typically 3-5, limited by Carnot
+  - T_source: 0-15°C (ground/air)
+  - T_sink: 35-55°C (underfloor heating)
+
+<span class="concept">Battery Storage:</span>
+  - SOC: 0-100%
+  - Charge cycles <= max cycles (typ. 6000)
+
+<span class="concept">Wind Turbine:</span>
+  - Power coefficient cp <= 59.3% (Betz limit)
+                    </pre>
+                </div>
+
+                <h4>[5.5] Violation Detection</h4>
                 <p>
                     When a constraint is violated, the system generates detailed diagnostics:
                 </p>
@@ -540,8 +577,19 @@ pressure 320 bar, status: active"</pre>
                     Use the sample selector to load pre-defined test cases:
                 </p>
                 <ul>
-                    <li><span class="concept">Valid sample:</span> Text with no violations</li>
-                    <li><span class="concept">Invalid samples:</span> Text with various constraint violations</li>
+                    <li><span class="concept">Natural Language (Prose):</span> Unstructured text demonstrating LLM parsing
+                        <ul style="margin-top: 0.5rem;">
+                            <li>Maintenance Reports - formal documentation</li>
+                            <li>Technician Notes - informal shorthand</li>
+                            <li>Urgent Emails - flagged violations</li>
+                            <li>Inspection Logs - technical assessments</li>
+                            <li>Verbal Reports - transcribed speech</li>
+                        </ul>
+                    </li>
+                    <li><span class="concept">Energy Market:</span> Gas Turbine, Wind Turbine, Heat Pump, Battery Storage</li>
+                    <li><span class="concept">Physics/Thermodynamics:</span> Centrifugal Pump (NPSH), Heat Exchanger, Compressor</li>
+                    <li><span class="concept">Industry:</span> CNC Machine, Welding Robot, Hydraulic Press</li>
+                    <li><span class="concept">Error Examples:</span> Test cases with physics violations (efficiency >100%, cavitation, Carnot)</li>
                 </ul>
 
                 <h4>[7.4] Viewing Constraints</h4>

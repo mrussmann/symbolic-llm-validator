@@ -214,6 +214,64 @@
             gap: 1rem;
         }
     }
+
+    /* Verification box styles */
+    .verification-box {
+        margin-top: 1rem;
+        padding: 1rem;
+        border: 2px solid;
+        background-color: rgba(0, 0, 0, 0.3);
+    }
+    .verification-box.passed {
+        border-color: #00cc33;
+    }
+    .verification-box.failed {
+        border-color: #ff3333;
+    }
+    .verification-header {
+        font-weight: bold;
+        margin-bottom: 0.75rem;
+        font-size: 16px;
+    }
+    .verification-box.passed .verification-header {
+        color: #00ff41;
+    }
+    .verification-box.failed .verification-header {
+        color: #ff3333;
+    }
+    .verification-icon {
+        margin-right: 0.5rem;
+    }
+    .verification-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+    }
+    .verification-table th,
+    .verification-table td {
+        padding: 0.5rem;
+        text-align: left;
+        border-bottom: 1px solid #333;
+    }
+    .verification-table th {
+        color: #00cc33;
+        font-weight: normal;
+        text-transform: uppercase;
+        font-size: 12px;
+    }
+    .verification-table tr.check-passed td {
+        color: #00cc33;
+    }
+    .verification-table tr.check-failed td {
+        color: #ff3333;
+    }
+    .verification-table tr.check-passed td:last-child {
+        color: #00ff41;
+    }
+    .verification-table tr.check-failed td:last-child {
+        color: #ff3333;
+        font-weight: bold;
+    }
 </style>
 {% endblock %}
 
@@ -228,17 +286,43 @@
             <div class="form-group">
                 <label for="input-text"><span class="prompt">&gt;</span> INPUT TEXT:</label>
                 <textarea id="input-text" name="text" rows="8" class="terminal-textarea"
-                    placeholder="Enter technical maintenance text here...&#10;&#10;Example: Motor M1 has 15,000 operating hours with a maximum lifespan of 20,000 hours. The pressure is 250 bar."></textarea>
+                    placeholder="Enter technical maintenance text here...&#10;&#10;Example: Gas turbine GT-01 has 45,000 operating hours with maximum lifespan of 100,000 hours. Pressure: 320 bar. Temperature: 85°C."></textarea>
             </div>
 
             <div class="form-row">
                 <div class="sample-group">
                     <select id="sample-select" class="terminal-select">
-                        <option value="">-- Load a sample --</option>
-                        <option value="valid">Valid Text (no errors)</option>
-                        <option value="exceeded-hours">Exceeded Operating Hours</option>
-                        <option value="pressure-violation">Pressure Violation</option>
-                        <option value="multiple-errors">Multiple Errors</option>
+                        <option value="">-- Load Sample --</option>
+                        <optgroup label="Natural Language (Prose)">
+                            <option value="prose-maintenance-report">Maintenance Report (Valid)</option>
+                            <option value="prose-technician-notes">Technician Notes (Valid)</option>
+                            <option value="prose-email-urgent">Urgent Email (Violation)</option>
+                            <option value="prose-inspection-log">Inspection Log (Multiple Issues)</option>
+                            <option value="prose-verbal-report">Verbal Report Transcript (Violation)</option>
+                        </optgroup>
+                        <optgroup label="Energy Market">
+                            <option value="gasturbine">Gas Turbine (Power Plant)</option>
+                            <option value="windkraft">Wind Turbine (Offshore)</option>
+                            <option value="waermepumpe">Heat Pump (Building)</option>
+                            <option value="batteriespeicher">Battery Storage (Grid)</option>
+                        </optgroup>
+                        <optgroup label="Physics / Thermodynamics">
+                            <option value="kreiselpumpe">Centrifugal Pump (NPSH Check)</option>
+                            <option value="waermetauscher">Heat Exchanger (Energy Balance)</option>
+                            <option value="kompressor">Compressor (Isentropic)</option>
+                        </optgroup>
+                        <optgroup label="Industry">
+                            <option value="cnc-maschine">CNC Milling Machine</option>
+                            <option value="schweissroboter">Welding Robot (KUKA)</option>
+                            <option value="presse">Body Press</option>
+                        </optgroup>
+                        <optgroup label="Error Examples (Structured)">
+                            <option value="exceeded-hours">Exceeded Operating Hours</option>
+                            <option value="pressure-violation">Pressure Violation</option>
+                            <option value="cavitation-risk">Cavitation Risk (Pump)</option>
+                            <option value="energy-imbalance">Energy Balance Error</option>
+                            <option value="multiple-errors">Multiple Errors</option>
+                        </optgroup>
                     </select>
                 </div>
 
@@ -353,22 +437,637 @@ document.addEventListener('DOMContentLoaded', function() {
     const iterationsEl = document.getElementById('iterations');
     const processingTimeEl = document.getElementById('processing-time');
 
-    // Sample texts for demonstration
+    // Sample texts with expected results for LLM verification
+    // Each sample has: text, expected parsed values, expected violations
     const sampleTexts = {
-        'valid': 'Component: Motor M1. Operating hours: 15000. Maximum lifespan: 20000 hours. Pressure: 250 bar. Temperature: 75°C. Status: active.',
-        'exceeded-hours': 'Component: Motor M1. Operating hours: 25000. Maximum lifespan: 20000 hours. Status: active. Note: Motor is still running despite exceeding its expected lifespan.',
-        'pressure-violation': 'Component: Hydraulic Pump HP-01. Pressure: 450 bar. Temperature: 80°C. Status: warning. Note: Pressure exceeds safe operating limits.',
-        'multiple-errors': 'Component: Motor M2. Operating hours: 30000. Maximum lifespan: 20000 hours. Pressure: 500 bar. Temperature: 180°C. Status: critical.'
+        // === NATURAL LANGUAGE / PROSE EXAMPLES ===
+        // These test the LLM's ability to extract structured data from unstructured text
+
+        'prose-maintenance-report': {
+            text: `MAINTENANCE REPORT - Q4 2024
+
+Subject: Routine inspection of main cooling pump
+
+During today's scheduled maintenance, I inspected the primary cooling water pump (Model: KSB Omega 200, Serial: CWP-2024-0847). The unit has been running smoothly since installation three years ago and has now accumulated approximately 22,000 operating hours. According to the manufacturer specifications, these pumps are rated for up to 60,000 hours before major overhaul is required.
+
+Current readings show the system pressure holding steady at 12 bar, well within the normal operating range. The bearing temperature was measured at 58 degrees Celsius, which is acceptable. Vibration levels are nominal.
+
+The pump efficiency was calculated at 81% based on flow rate and power consumption measurements. NPSH checks confirm we have 7.5 meters available against a requirement of 4.2 meters - providing adequate cavitation margin.
+
+Maintenance interval is set at 4,000 hours. Next service due in approximately 2,000 operating hours.
+
+Recommendation: No immediate action required. Continue normal operation.
+
+Signed: J. Miller, Senior Technician`,
+            expected: {
+                parsed: {
+                    operating_hours: 22000,
+                    max_lifespan: 60000,
+                    maintenance_interval: 4000,
+                    pressure_bar: 12,
+                    temperature_c: 58,
+                    efficiency: 81,
+                    npsh_available: 7.5,
+                    npsh_required: 4.2
+                },
+                violations: [],
+                isValid: true
+            }
+        },
+
+        'prose-technician-notes': {
+            text: `Quick notes from site visit - Thursday afternoon
+
+Checked on the backup generator at the north facility. It's a Caterpillar diesel unit we installed back in 2019. Looking at the hour meter, it shows just over 8,500 hours of runtime. Not bad considering the expected service life is around 40,000 hours for these models.
+
+Oil pressure is good - sitting at about 4.5 bar which is right in the middle of the acceptable range. Coolant temp stabilized at 82°C after the load test. We ran it up to 85% load for 30 minutes with no issues.
+
+The maintenance schedule calls for oil changes every 500 hours. Last change was done at 8,200 hours according to the log book, so we're due for another one soon.
+
+Everything looks fine. Will schedule the oil change for next week.
+
+- Dave`,
+            expected: {
+                parsed: {
+                    operating_hours: 8500,
+                    max_lifespan: 40000,
+                    maintenance_interval: 500,
+                    pressure_bar: 4.5,
+                    temperature_c: 82
+                },
+                violations: [],
+                isValid: true
+            }
+        },
+
+        'prose-email-urgent': {
+            text: `From: shift.supervisor@plant.com
+To: maintenance.manager@plant.com
+Subject: URGENT - Hydraulic Press Issue
+
+Hi,
+
+We have a problem with hydraulic press #3 on the assembly line. The operators noticed some unusual behavior during the night shift.
+
+The press has been running continuously for almost 95,000 hours now. I checked the documentation and the maximum rated lifespan for this model is only 80,000 hours - so we're already 15,000 hours over the recommended limit!
+
+Current pressure readings are showing 385 bar. I know our normal operating pressure should be under 350 bar max. The hydraulic oil temperature has also climbed to 78°C which seems high but still within limits.
+
+I've reduced the cycle rate for now but we really need to look at this press. The operators are concerned about safety.
+
+Can you send someone to evaluate? This is urgent.
+
+Thanks,
+Mike
+Night Shift Supervisor`,
+            expected: {
+                parsed: {
+                    operating_hours: 95000,
+                    max_lifespan: 80000,
+                    pressure_bar: 385,
+                    temperature_c: 78
+                },
+                violations: ['C2', 'C4'],  // Exceeded lifespan + pressure violation
+                violationTypes: ['RELATIONAL_ERROR', 'RANGE_ERROR'],
+                isValid: false,
+                minViolations: 2
+            }
+        },
+
+        'prose-inspection-log': {
+            text: `ANNUAL EQUIPMENT INSPECTION LOG
+Date: November 15, 2024
+Inspector: Sarah Chen, P.Eng.
+
+UNIT: Industrial Air Compressor System
+Location: Building C, Mechanical Room 2
+Model: Atlas Copco GA-315
+
+FINDINGS:
+
+This compressor unit has seen heavy use over the past decade. The hour counter reads 112,000 hours, which is concerning given the manufacturer's stated maximum service life of 100,000 hours. A replacement should have been planned 12,000 hours ago.
+
+I measured the outlet pressure at 11.5 bar with inlet at 1 bar, giving a compression ratio of 11.5. The discharge temperature was extremely high at 295°C. This seems excessive even for a multi-stage compressor.
+
+Most worrying is the efficiency calculation. Based on the power draw of 320 kW and the actual compressed air output, I'm getting an isentropic efficiency of about 108%. This is physically impossible and suggests either the instrumentation is faulty or there's something seriously wrong with our measurements. A real compressor cannot exceed 100% efficiency - that would violate basic thermodynamics.
+
+The maintenance log shows intervals set at 8000 hours, which is reasonable.
+
+RECOMMENDATIONS:
+1. Immediately verify all instrumentation
+2. Plan for compressor replacement - unit is past end of life
+3. Investigate the impossible efficiency reading
+4. Do not increase load until issues resolved
+
+This unit requires immediate attention.`,
+            expected: {
+                parsed: {
+                    operating_hours: 112000,
+                    max_lifespan: 100000,
+                    maintenance_interval: 8000,
+                    pressure_bar: 11.5,
+                    temperature_c: 295,
+                    efficiency: 108
+                },
+                violations: ['C2', 'C9'],  // Exceeded lifespan + impossible efficiency
+                violationTypes: ['RELATIONAL_ERROR', 'PHYSICAL_ERROR'],
+                isValid: false,
+                minViolations: 2
+            }
+        },
+
+        'prose-verbal-report': {
+            text: `[Transcript of verbal report - recorded during shift handover]
+
+"So, uh, let me tell you about pump station 7. We've been having problems all week with that feedwater pump - the big centrifugal one, you know, the Grundfos unit.
+
+The thing's been running for like forty-two thousand hours now, and it's rated for eighty thousand, so that part's fine. But here's the issue - we're getting cavitation. You can hear it, that crackling sound.
+
+I checked the NPSH values. The available head is only about 3.2 meters but the pump needs at least 5.8 meters to operate properly. We're almost 3 meters short! That's why it's cavitating.
+
+The suction pressure is really low, only about 0.8 bar, and the water temperature going in is 135 degrees Celsius. Hot water has higher vapor pressure so that makes the cavitation worse.
+
+I had to throttle back the flow to reduce the symptoms but we really need to fix this. Maybe we need to raise the feedwater tank or install a booster pump on the suction side.
+
+Also, efficiency is down to about 72% from the normal 85%. That's probably related to the cavitation damage.
+
+Anyway, that's the situation. Next shift needs to keep an eye on it."`,
+            expected: {
+                parsed: {
+                    operating_hours: 42000,
+                    max_lifespan: 80000,
+                    temperature_c: 135,
+                    pressure_bar: 0.8,
+                    npsh_available: 3.2,
+                    npsh_required: 5.8,
+                    efficiency: 72
+                },
+                violations: ['C10'],  // NPSH cavitation
+                violationTypes: ['PHYSICAL_ERROR'],
+                isValid: false,
+                minViolations: 1
+            }
+        },
+
+        // === ENERGY MARKET (Valid Examples) ===
+        'gasturbine': {
+            text: `Component: Gas Turbine GT-Siemens-H-Class
+Type: Gas Turbine
+Operating Hours: 45000
+Maximum Lifespan: 100000 hours
+Maintenance Interval: 8000 hours
+Pressure: 320 bar
+Temperature: 85°C
+RPM: 3000
+Efficiency: 63%
+Fuel: Natural Gas/H2-ready
+Status: active
+Location: Irsching Gas Power Plant
+Last Inspection: 2024-08-15`,
+            expected: {
+                parsed: {
+                    operating_hours: 45000,
+                    max_lifespan: 100000,
+                    maintenance_interval: 8000,
+                    pressure_bar: 320,
+                    temperature_c: 85,
+                    rpm: 3000,
+                    efficiency: 63
+                },
+                violations: [],
+                isValid: true
+            }
+        },
+
+        'windkraft': {
+            text: `Component: Wind Turbine Siemens-Gamesa-14MW
+Type: Wind Turbine
+Operating Hours: 52000
+Maximum Lifespan: 175000 hours
+Maintenance Interval: 8760 hours
+Rotor Speed: 8 RPM
+Generator Speed: 1200 RPM
+Nacelle Temperature: 35°C
+Rated Power: 14000 kW
+Current Power: 11200 kW
+Status: active
+Location: North Sea Offshore - He Dreiht Wind Farm`,
+            expected: {
+                parsed: {
+                    operating_hours: 52000,
+                    max_lifespan: 175000,
+                    maintenance_interval: 8760,
+                    temperature_c: 35
+                },
+                violations: [],
+                isValid: true
+            }
+        },
+
+        'waermepumpe': {
+            text: `Component: Heat Pump Viessmann-Vitocal-300
+Type: Heat Pump
+Operating Hours: 12500
+Maximum Lifespan: 80000 hours
+Maintenance Interval: 4380 hours
+Refrigerant Pressure: 28 bar
+Supply Temperature: 55°C
+Return Temperature: 45°C
+Source Temperature: 8°C
+COP: 4.2
+Refrigerant: R290 (Propane)
+Heating Capacity: 12 kW
+Status: active`,
+            expected: {
+                parsed: {
+                    operating_hours: 12500,
+                    max_lifespan: 80000,
+                    maintenance_interval: 4380,
+                    pressure_bar: 28,
+                    cop: 4.2,
+                    source_temperature: 8,
+                    sink_temperature: 55
+                },
+                violations: [],
+                isValid: true
+            }
+        },
+
+        'batteriespeicher': {
+            text: `Component: Battery Storage Tesla-Megapack-XL
+Type: Battery Storage
+Operating Hours: 8500
+Maximum Lifespan: 87600 hours
+Charge Cycles: 2850
+Maximum Cycles: 10000
+Capacity: 3916 kWh
+State of Charge SOC: 72%
+Cell Temperature: 28°C
+Voltage: 1500 V
+Status: active
+Location: Biblis Grid Stabilization`,
+            expected: {
+                parsed: {
+                    operating_hours: 8500,
+                    max_lifespan: 87600,
+                    cycles: 2850,
+                    max_cycles: 10000,
+                    soc: 72,
+                    temperature_c: 28
+                },
+                violations: [],
+                isValid: true
+            }
+        },
+
+        // === PHYSICS / THERMODYNAMICS (Valid Examples) ===
+        'kreiselpumpe': {
+            text: `Component: Centrifugal Pump KSB-Omega-350
+Type: Centrifugal Pump
+Operating Hours: 18500
+Maximum Lifespan: 60000 hours
+Maintenance Interval: 4000 hours
+Flow Rate: 850 m³/h
+Head: 120 m
+Inlet Pressure: 2 bar
+Outlet Pressure: 14 bar
+Medium Temperature: 65°C
+Medium Density: 980 kg/m³
+NPSH Available: 8 m
+NPSH Required: 5 m
+RPM: 2950
+Power Consumption: 350 kW
+Efficiency: 82%
+Status: active`,
+            expected: {
+                parsed: {
+                    operating_hours: 18500,
+                    max_lifespan: 60000,
+                    maintenance_interval: 4000,
+                    temperature_c: 65,
+                    npsh_available: 8,
+                    npsh_required: 5,
+                    rpm: 2950,
+                    efficiency: 82
+                },
+                violations: [],
+                isValid: true
+            }
+        },
+
+        'waermetauscher': {
+            text: `Component: Heat Exchanger Kelvion-PHE-500
+Type: Plate Heat Exchanger
+Operating Hours: 24000
+Maximum Lifespan: 100000 hours
+Hot Inlet Temperature: 120°C
+Hot Outlet Temperature: 75°C
+Cold Inlet Temperature: 25°C
+Cold Outlet Temperature: 68°C
+Hot Mass Flow: 45000 kg/h
+Cold Mass Flow: 52000 kg/h
+Heat Transfer Rate: 2100 kW
+Hot Side Pressure Drop: 0.8 bar
+Cold Side Pressure Drop: 0.6 bar
+LMTD: 42 K
+Heat Transfer Coefficient: 3500 W/m²K
+Status: active`,
+            expected: {
+                parsed: {
+                    operating_hours: 24000,
+                    max_lifespan: 100000,
+                    hot_inlet_temp: 120,
+                    hot_outlet_temp: 75,
+                    cold_inlet_temp: 25,
+                    cold_outlet_temp: 68,
+                    mass_flow_hot: 45000,
+                    mass_flow_cold: 52000
+                },
+                violations: [],
+                isValid: true
+            }
+        },
+
+        'kompressor': {
+            text: `Component: Screw Compressor Atlas-Copco-ZR500
+Type: Screw Compressor
+Operating Hours: 32000
+Maximum Lifespan: 80000 hours
+Maintenance Interval: 4000 hours
+Inlet Pressure: 1 bar
+Outlet Pressure: 10 bar
+Compression Ratio: 10
+Inlet Temperature: 25°C
+Outlet Temperature: 285°C
+Intake Volume Flow: 500 m³/min
+Isentropic Efficiency: 78%
+Power Consumption: 2800 kW
+Cooling Water Temperature: 32°C
+Status: active`,
+            expected: {
+                parsed: {
+                    operating_hours: 32000,
+                    max_lifespan: 80000,
+                    maintenance_interval: 4000,
+                    inlet_temperature: 25,
+                    outlet_temperature: 285,
+                    pressure_ratio: 10,
+                    efficiency: 78
+                },
+                violations: [],
+                isValid: true
+            }
+        },
+
+        // === INDUSTRY (Valid Examples) ===
+        'cnc-maschine': {
+            text: `Component: CNC Milling Machine DMG-MORI-DMU-125
+Type: CNC Machining Center
+Operating Hours: 28000
+Maximum Lifespan: 80000 hours
+Maintenance Interval: 2000 hours
+Spindle Speed: 12000 RPM
+Feed Rate: 30000 mm/min
+Positioning Accuracy: 0.005 mm
+Coolant Temperature: 22°C
+Hydraulic Pressure: 180 bar
+Spindle Temperature: 38°C
+Status: active
+Last Calibration: 2024-10-20`,
+            expected: {
+                parsed: {
+                    operating_hours: 28000,
+                    max_lifespan: 80000,
+                    maintenance_interval: 2000,
+                    pressure_bar: 180,
+                    temperature_c: 38,
+                    rpm: 12000
+                },
+                violations: [],
+                isValid: true
+            }
+        },
+
+        'schweissroboter': {
+            text: `Component: Welding Robot KUKA-KR-270-R2700
+Type: Industrial Robot
+Operating Hours: 45000
+Maximum Lifespan: 100000 hours
+Maintenance Interval: 5000 hours
+Payload: 270 kg
+Reach: 2700 mm
+Repeatability: 0.05 mm
+Welding Current: 350 A
+Shielding Gas Flow: 18 l/min
+Controller Temperature: 42°C
+Axes: 6
+Status: active
+Location: BMW Dingolfing Plant`,
+            expected: {
+                parsed: {
+                    operating_hours: 45000,
+                    max_lifespan: 100000,
+                    maintenance_interval: 5000,
+                    temperature_c: 42
+                },
+                violations: [],
+                isValid: true
+            }
+        },
+
+        'presse': {
+            text: `Component: Body Press Schuler-ServoDirect-32000
+Type: Servo Press
+Operating Hours: 52000
+Maximum Lifespan: 120000 hours
+Maintenance Interval: 6000 hours
+Press Force: 32000 kN
+Strokes Per Minute: 18
+Table Size: 4500 x 2400 mm
+Hydraulic Pressure: 320 bar
+Hydraulic Oil Temperature: 48°C
+Power Consumption: 850 kW
+Status: active
+Location: VW Wolfsburg Plant`,
+            expected: {
+                parsed: {
+                    operating_hours: 52000,
+                    max_lifespan: 120000,
+                    maintenance_interval: 6000,
+                    pressure_bar: 320,
+                    temperature_c: 48
+                },
+                violations: [],
+                isValid: true
+            }
+        },
+
+        // === ERROR EXAMPLES (Expected Violations) ===
+        'exceeded-hours': {
+            text: `Component: Gearbox Flender-ZAPEX-ZW
+Type: Industrial Gearbox
+Operating Hours: 95000
+Maximum Lifespan: 80000 hours
+Maintenance Interval: 8000 hours
+Input Speed: 1500 RPM
+Output Speed: 75 RPM
+Gear Ratio: 20:1
+Oil Temperature: 72°C
+Oil Level: normal
+Status: active
+Note: Gearbox exceeds maximum lifespan by 18.75%`,
+            expected: {
+                parsed: {
+                    operating_hours: 95000,
+                    max_lifespan: 80000,
+                    maintenance_interval: 8000,
+                    temperature_c: 72
+                },
+                violations: ['C2'],  // operating_hours > max_lifespan
+                violationTypes: ['RELATIONAL_ERROR'],
+                isValid: false
+            }
+        },
+
+        'pressure-violation': {
+            text: `Component: High Pressure Reactor BASF-HDR-500
+Type: Chemical Reactor
+Operating Hours: 15000
+Maximum Lifespan: 50000 hours
+Pressure: 450 bar
+Temperature: 120°C
+Volume: 500 liters
+Medium: Ammonia Synthesis
+Status: warning
+Note: Pressure exceeds permissible operating range of 350 bar`,
+            expected: {
+                parsed: {
+                    operating_hours: 15000,
+                    max_lifespan: 50000,
+                    pressure_bar: 450,
+                    temperature_c: 120
+                },
+                violations: ['C4'],  // pressure > 350 bar
+                violationTypes: ['RANGE_ERROR'],
+                isValid: false
+            }
+        },
+
+        'cavitation-risk': {
+            text: `Component: Feedwater Pump FWP-PowerPlant-03
+Type: Boiler Feedwater Pump
+Operating Hours: 42000
+Maximum Lifespan: 80000 hours
+Flow Rate: 650 m³/h
+Head: 180 m
+Inlet Pressure: 1.5 bar
+Medium Temperature: 145°C
+NPSH Available: 3.5 m
+NPSH Required: 6.2 m
+RPM: 3550
+Status: critical
+Note: CAVITATION RISK - NPSH Available < NPSH Required`,
+            expected: {
+                parsed: {
+                    operating_hours: 42000,
+                    max_lifespan: 80000,
+                    temperature_c: 145,
+                    npsh_available: 3.5,
+                    npsh_required: 6.2,
+                    rpm: 3550
+                },
+                violations: ['C10'],  // NPSH_available < NPSH_required
+                violationTypes: ['PHYSICAL_ERROR'],
+                isValid: false
+            }
+        },
+
+        'energy-imbalance': {
+            text: `Component: Heat Exchanger HX-Process-12
+Type: Shell and Tube Heat Exchanger
+Operating Hours: 28000
+Maximum Lifespan: 60000 hours
+Hot Inlet Temperature: 180°C
+Hot Outlet Temperature: 90°C
+Cold Inlet Temperature: 20°C
+Cold Outlet Temperature: 150°C
+Hot Mass Flow: 25000 kg/h
+Cold Mass Flow: 8000 kg/h
+cp Hot: 4.2 kJ/kgK
+cp Cold: 4.18 kJ/kgK
+Calculated Heat Rate: 2625 kW
+Measured Heat Rate: 4350 kW
+Status: error
+Note: Energy balance not satisfied - Heat transfer physically impossible`,
+            expected: {
+                parsed: {
+                    operating_hours: 28000,
+                    max_lifespan: 60000,
+                    hot_inlet_temp: 180,
+                    hot_outlet_temp: 90,
+                    cold_inlet_temp: 20,
+                    cold_outlet_temp: 150,
+                    mass_flow_hot: 25000,
+                    mass_flow_cold: 8000
+                },
+                violations: ['C11'],  // Q_hot != Q_cold (energy imbalance)
+                violationTypes: ['PHYSICAL_ERROR'],
+                isValid: false
+            }
+        },
+
+        'multiple-errors': {
+            text: `Component: Compressor System CS-Chemical-07
+Type: Reciprocating Compressor
+Operating Hours: 125000
+Maximum Lifespan: 100000 hours
+Maintenance Interval: 150000 hours
+Inlet Pressure: 1 bar
+Outlet Pressure: 420 bar
+Outlet Temperature: 380°C
+Volume Flow: 200 m³/min
+Isentropic Efficiency: 125%
+NPSH Available: 2 m
+NPSH Required: 5 m
+Status: critical
+Note: Multiple critical errors - Operating hours exceeded, Pressure too high, Temperature too high, Efficiency physically impossible, Maintenance interval > Lifespan`,
+            expected: {
+                parsed: {
+                    operating_hours: 125000,
+                    max_lifespan: 100000,
+                    maintenance_interval: 150000,
+                    pressure_bar: 420,
+                    temperature_c: 380,
+                    efficiency: 125,
+                    npsh_available: 2,
+                    npsh_required: 5
+                },
+                violations: ['C2', 'C3', 'C4', 'C5', 'C9', 'C10'],
+                violationTypes: ['RELATIONAL_ERROR', 'RANGE_ERROR', 'PHYSICAL_ERROR'],
+                isValid: false,
+                minViolations: 4  // At least 4 violations expected
+            }
+        }
     };
+
+    // Track current sample for verification
+    let currentSampleKey = null;
+    let currentExpected = null;
 
     // Handle sample dropdown change
     const sampleSelect = document.getElementById('sample-select');
     sampleSelect.addEventListener('change', function() {
         const sampleKey = this.value;
         if (sampleKey && sampleTexts[sampleKey]) {
-            inputText.value = sampleTexts[sampleKey];
+            const sample = sampleTexts[sampleKey];
+            inputText.value = sample.text;
+            currentSampleKey = sampleKey;
+            currentExpected = sample.expected;
             results.classList.add('hidden');
             progressContainer.classList.add('hidden');
+        } else {
+            currentSampleKey = null;
+            currentExpected = null;
         }
     });
 
@@ -485,7 +1184,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             console.error('Validation error:', error);
             updateStep('complete', 'error', error.message);
-            resultStatus.innerHTML = `<div class="status-box error">[ERROR] ${error.message}</div>`;
+            Security.showError(resultStatus, error.message);
             results.classList.remove('hidden');
         } finally {
             submitBtn.disabled = false;
@@ -510,7 +1209,7 @@ document.addEventListener('DOMContentLoaded', function() {
             displayResults(data);
         } else if (eventType === 'error') {
             updateStep('complete', 'error', data.message);
-            resultStatus.innerHTML = `<div class="status-box error">[ERROR] ${data.message}</div>`;
+            Security.showError(resultStatus, data.message);
             results.classList.remove('hidden');
         }
     }
@@ -519,19 +1218,152 @@ document.addEventListener('DOMContentLoaded', function() {
         inputText.value = '';
         results.classList.add('hidden');
         progressContainer.classList.add('hidden');
+        currentSampleKey = null;
+        currentExpected = null;
+        sampleSelect.value = '';
     });
+
+    // Verification functions for comparing LLM output against expected values
+    function verifyResults(data, expected) {
+        const verification = {
+            passed: true,
+            checks: [],
+            summary: ''
+        };
+
+        if (!expected) {
+            verification.summary = 'No expected values defined for verification';
+            return verification;
+        }
+
+        // Check 1: Validity matches expected
+        const actualValid = data.success && data.violations.length === 0;
+        const validityMatch = actualValid === expected.isValid;
+        verification.checks.push({
+            name: 'Validity Check',
+            expected: expected.isValid ? 'VALID' : 'INVALID',
+            actual: actualValid ? 'VALID' : 'INVALID',
+            passed: validityMatch
+        });
+        if (!validityMatch) verification.passed = false;
+
+        // Check 2: Violation count (for invalid samples)
+        if (!expected.isValid) {
+            const expectedViolationCount = expected.minViolations || expected.violations.length;
+            const actualViolationCount = data.violations ? data.violations.length : 0;
+            const countMatch = actualViolationCount >= expectedViolationCount;
+            verification.checks.push({
+                name: 'Violation Count',
+                expected: `>= ${expectedViolationCount}`,
+                actual: actualViolationCount.toString(),
+                passed: countMatch
+            });
+            if (!countMatch) verification.passed = false;
+
+            // Check 3: Violation types match
+            if (expected.violationTypes && data.violations) {
+                const actualTypes = new Set(data.violations.map(v => v.type));
+                const expectedTypes = new Set(expected.violationTypes);
+                const typesFound = expected.violationTypes.filter(t => actualTypes.has(t));
+                const typeMatch = typesFound.length > 0;
+                verification.checks.push({
+                    name: 'Violation Types',
+                    expected: expected.violationTypes.join(', '),
+                    actual: Array.from(actualTypes).join(', ') || 'none',
+                    passed: typeMatch
+                });
+                if (!typeMatch) verification.passed = false;
+            }
+        }
+
+        // Check 4: Key parsed values (if we have parsed_data in response)
+        if (data.parsed_data && expected.parsed) {
+            const criticalFields = ['operating_hours', 'max_lifespan', 'pressure_bar', 'temperature_c'];
+            for (const field of criticalFields) {
+                if (expected.parsed[field] !== undefined) {
+                    const actualValue = data.parsed_data[field];
+                    const expectedValue = expected.parsed[field];
+                    if (actualValue !== undefined) {
+                        const match = Math.abs(actualValue - expectedValue) < 0.1;
+                        verification.checks.push({
+                            name: `Parsed: ${field}`,
+                            expected: expectedValue.toString(),
+                            actual: actualValue.toString(),
+                            passed: match
+                        });
+                        if (!match) verification.passed = false;
+                    }
+                }
+            }
+        }
+
+        verification.summary = verification.passed
+            ? `VERIFICATION PASSED - ${verification.checks.filter(c => c.passed).length}/${verification.checks.length} checks`
+            : `VERIFICATION FAILED - ${verification.checks.filter(c => !c.passed).length} check(s) failed`;
+
+        return verification;
+    }
+
+    function createVerificationBox(verification) {
+        const box = document.createElement('div');
+        box.className = 'verification-box ' + (verification.passed ? 'passed' : 'failed');
+
+        const header = document.createElement('div');
+        header.className = 'verification-header';
+        header.innerHTML = `<span class="verification-icon">${verification.passed ? '[✓]' : '[✗]'}</span> LLM VERIFICATION: ${verification.summary}`;
+        box.appendChild(header);
+
+        if (verification.checks.length > 0) {
+            const table = document.createElement('table');
+            table.className = 'verification-table';
+            table.innerHTML = `
+                <thead>
+                    <tr>
+                        <th>Check</th>
+                        <th>Expected</th>
+                        <th>Actual</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            `;
+            const tbody = table.querySelector('tbody');
+            verification.checks.forEach(check => {
+                const row = document.createElement('tr');
+                row.className = check.passed ? 'check-passed' : 'check-failed';
+                row.innerHTML = `
+                    <td>${Security.escapeHtml(check.name)}</td>
+                    <td>${Security.escapeHtml(check.expected)}</td>
+                    <td>${Security.escapeHtml(check.actual)}</td>
+                    <td>${check.passed ? '[OK]' : '[FAIL]'}</td>
+                `;
+                tbody.appendChild(row);
+            });
+            box.appendChild(table);
+        }
+
+        return box;
+    }
 
     function displayResults(data) {
         // Status - distinguish between originally valid, corrected, and still invalid
+        resultStatus.innerHTML = '';
         if (data.success && !data.corrected_text) {
             // Originally valid, no changes needed
-            resultStatus.innerHTML = '<div class="status-box success">[OK] TEXT IS CONSISTENT - ALL CONSTRAINTS SATISFIED</div>';
+            resultStatus.appendChild(Security.createStatusBox('success', '[OK] TEXT IS CONSISTENT - ALL CONSTRAINTS SATISFIED'));
         } else if (data.success && data.corrected_text) {
             // Had violations but was corrected successfully
-            resultStatus.innerHTML = '<div class="status-box warning">[CORRECTED] VIOLATIONS WERE FOUND AND AUTO-CORRECTED</div>';
+            resultStatus.appendChild(Security.createStatusBox('warning', '[CORRECTED] VIOLATIONS WERE FOUND AND AUTO-CORRECTED'));
         } else {
             // Still has violations (couldn't be corrected)
-            resultStatus.innerHTML = `<div class="status-box error">[ERROR] FOUND ${data.violations.length} CONSTRAINT VIOLATION(S)</div>`;
+            resultStatus.appendChild(Security.createStatusBox('error', '[ERROR] FOUND ' + data.violations.length + ' CONSTRAINT VIOLATION(S)'));
+        }
+
+        // VERIFICATION: Compare against expected values if this is a sample
+        if (currentExpected) {
+            const verification = verifyResults(data, currentExpected);
+            const verificationBox = createVerificationBox(verification);
+            resultStatus.appendChild(verificationBox);
         }
 
         // Violations - show original violations if text was corrected, otherwise show final violations
@@ -543,25 +1375,24 @@ document.addEventListener('DOMContentLoaded', function() {
             const headerText = data.corrected_text
                 ? 'ORIGINAL CONSTRAINT VIOLATIONS (FIXED):'
                 : 'CONSTRAINT VIOLATIONS:';
-            violationsContainer.querySelector('h4').innerHTML = `<span class="prompt">&gt;</span> ${headerText}`;
-            violationsList.innerHTML = violationsToShow.map(v => `
-                <div class="violation-card${data.corrected_text ? ' fixed' : ''}">
-                    <div class="violation-type">[${v.type}]</div>
-                    <div class="violation-message">${v.message}</div>
-                    <div class="violation-details">
-                        <span>Constraint: ${v.constraint}</span>
-                        ${v.property_name ? `<span>Property: ${v.property_name}</span>` : ''}
-                        ${v.actual_value !== null ? `<span>Actual: ${v.actual_value}</span>` : ''}
-                        ${v.expected_value ? `<span>Expected: ${v.expected_value}</span>` : ''}
-                    </div>
-                </div>
-            `).join('');
+            const headerEl = violationsContainer.querySelector('h4');
+            headerEl.innerHTML = '';
+            const promptSpan = Security.createElement('span', '>', 'prompt');
+            headerEl.appendChild(promptSpan);
+            headerEl.appendChild(document.createTextNode(' ' + headerText));
+
+            // Clear and rebuild violations list safely
+            violationsList.innerHTML = '';
+            violationsToShow.forEach(function(v) {
+                const card = Security.createViolationCard(v, !!data.corrected_text);
+                violationsList.appendChild(card);
+            });
             violationsContainer.classList.remove('hidden');
         } else {
             violationsContainer.classList.add('hidden');
         }
 
-        // Corrected text
+        // Corrected text (textContent is already safe)
         if (data.corrected_text) {
             correctedText.textContent = data.corrected_text;
             correctedContainer.classList.remove('hidden');
@@ -569,7 +1400,7 @@ document.addEventListener('DOMContentLoaded', function() {
             correctedContainer.classList.add('hidden');
         }
 
-        // Metrics
+        // Metrics (numbers are safe)
         iterationsEl.textContent = data.iterations || 1;
         processingTimeEl.textContent = data.processing_time_ms.toFixed(2);
 

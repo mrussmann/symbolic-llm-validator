@@ -51,37 +51,78 @@ app_state = {
     "enabled_for_public": True,  # App enabled for non-authenticated users by default
 }
 
-# Admin credentials
-ADMIN_USERNAME = "myjoe"
-ADMIN_PASSWORD = "design41."
+# CSRF token store (maps session_id to csrf_token)
+csrf_tokens: dict[str, str] = {}
 
 
-def create_session(username: str) -> str:
-    """Create a new session and return session ID."""
-    session_id = str(uuid.uuid4())
+def create_session(username: str) -> tuple[str, str]:
+    """Create a new session and return (session_id, csrf_token)."""
+    session_id = secrets.token_urlsafe(32)
+    csrf_token = secrets.token_urlsafe(32)
     sessions[session_id] = {
         "username": username,
         "created_at": datetime.utcnow(),
+        "expires_at": datetime.utcnow().timestamp() + settings.session_max_age,
     }
-    return session_id
+    csrf_tokens[session_id] = csrf_token
+    return session_id, csrf_token
 
 
 def get_session(session_id: str) -> Optional[dict]:
-    """Get session data by ID."""
-    return sessions.get(session_id)
+    """Get session data by ID, checking expiration."""
+    session = sessions.get(session_id)
+    if not session:
+        return None
+
+    # Check if session has expired
+    if datetime.utcnow().timestamp() > session.get("expires_at", 0):
+        delete_session(session_id)
+        return None
+
+    return session
 
 
 def delete_session(session_id: str) -> None:
-    """Delete a session."""
+    """Delete a session and its CSRF token."""
     if session_id in sessions:
         del sessions[session_id]
+    if session_id in csrf_tokens:
+        del csrf_tokens[session_id]
+
+
+def cleanup_expired_sessions() -> None:
+    """Remove all expired sessions."""
+    current_time = datetime.utcnow().timestamp()
+    expired = [
+        sid for sid, session in sessions.items()
+        if current_time > session.get("expires_at", 0)
+    ]
+    for sid in expired:
+        delete_session(sid)
 
 
 def verify_credentials(username: str, password: str) -> bool:
-    """Verify login credentials."""
-    correct_username = secrets.compare_digest(username.encode("utf8"), ADMIN_USERNAME.encode("utf8"))
-    correct_password = secrets.compare_digest(password.encode("utf8"), ADMIN_PASSWORD.encode("utf8"))
+    """Verify login credentials using constant-time comparison."""
+    if not settings.is_admin_configured():
+        return False
+
+    correct_username = secrets.compare_digest(
+        username.encode("utf8"),
+        settings.admin_username.encode("utf8")
+    )
+    correct_password = secrets.compare_digest(
+        password.encode("utf8"),
+        settings.admin_password.encode("utf8")
+    )
     return correct_username and correct_password
+
+
+def verify_csrf_token(session_id: str, csrf_token: str) -> bool:
+    """Verify CSRF token for a session."""
+    expected_token = csrf_tokens.get(session_id)
+    if not expected_token:
+        return False
+    return secrets.compare_digest(csrf_token, expected_token)
 
 
 def get_current_user(session_id: Optional[str] = Cookie(None, alias="session_id")) -> Optional[str]:
@@ -95,12 +136,19 @@ def get_current_user(session_id: Optional[str] = Cookie(None, alias="session_id"
 
 
 def require_admin(session_id: Optional[str] = Cookie(None, alias="session_id")) -> str:
-    """Require admin authentication, redirect to login if not authenticated."""
+    """Require admin authentication, return 401 if not authenticated."""
+    if not settings.is_admin_configured():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Admin authentication not configured"
+        )
+
     user = get_current_user(session_id)
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_303_SEE_OTHER,
-            headers={"Location": "/login"}
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+            headers={"WWW-Authenticate": "Bearer"}
         )
     return user
 
@@ -125,6 +173,11 @@ async def lifespan(app: FastAPI):
     """Application lifespan handler."""
     logger.info(f"Starting Logic-Guard-Layer v{__version__}")
 
+    # Log security configuration warnings
+    security_warnings = settings.validate_security_config()
+    for warning in security_warnings:
+        logger.warning(f"SECURITY: {warning}")
+
     # Initialize OntologyManager with default ontology
     ontology_manager = get_ontology_manager()
     if SCHEMA_PATH.exists():
@@ -145,14 +198,142 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Add CORS middleware
+
+# Security Headers Middleware
+from starlette.middleware.base import BaseHTTPMiddleware
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Add security headers to all responses."""
+
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+
+        # Prevent clickjacking
+        response.headers["X-Frame-Options"] = "DENY"
+
+        # Prevent MIME type sniffing
+        response.headers["X-Content-Type-Options"] = "nosniff"
+
+        # Enable XSS filter (legacy, but still useful)
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+
+        # Referrer policy
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+
+        # Content Security Policy
+        csp = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' https://d3js.org https://cdn.jsdelivr.net; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data:; "
+            "font-src 'self'; "
+            "connect-src 'self'; "
+            "frame-ancestors 'none';"
+        )
+        response.headers["Content-Security-Policy"] = csp
+
+        # Permissions Policy (previously Feature-Policy)
+        response.headers["Permissions-Policy"] = (
+            "geolocation=(), microphone=(), camera=(), payment=()"
+        )
+
+        return response
+
+
+# Add security headers middleware
+app.add_middleware(SecurityHeadersMiddleware)
+
+
+# Rate Limiting Middleware
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    """Simple in-memory rate limiting middleware."""
+
+    def __init__(self, app, requests_limit: int = 100, window_seconds: int = 60):
+        super().__init__(app)
+        self.requests_limit = requests_limit
+        self.window_seconds = window_seconds
+        self.requests: dict[str, list[float]] = {}
+
+    def _get_client_ip(self, request: Request) -> str:
+        """Get client IP from request, considering proxies."""
+        forwarded = request.headers.get("X-Forwarded-For")
+        if forwarded:
+            return forwarded.split(",")[0].strip()
+        return request.client.host if request.client else "unknown"
+
+    def _is_rate_limited(self, client_ip: str) -> bool:
+        """Check if client is rate limited."""
+        now = datetime.utcnow().timestamp()
+        window_start = now - self.window_seconds
+
+        # Get or create request list for this IP
+        if client_ip not in self.requests:
+            self.requests[client_ip] = []
+
+        # Remove old requests outside the window
+        self.requests[client_ip] = [
+            ts for ts in self.requests[client_ip] if ts > window_start
+        ]
+
+        # Check if over limit
+        if len(self.requests[client_ip]) >= self.requests_limit:
+            return True
+
+        # Add current request
+        self.requests[client_ip].append(now)
+        return False
+
+    async def dispatch(self, request: Request, call_next):
+        # Skip rate limiting for health checks
+        if request.url.path == "/api/health":
+            return await call_next(request)
+
+        client_ip = self._get_client_ip(request)
+
+        if self._is_rate_limited(client_ip):
+            return Response(
+                content=json.dumps({
+                    "error": "Rate limit exceeded",
+                    "retry_after": self.window_seconds
+                }),
+                status_code=429,
+                media_type="application/json",
+                headers={"Retry-After": str(self.window_seconds)}
+            )
+
+        return await call_next(request)
+
+
+# Add rate limiting middleware
 app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    RateLimitMiddleware,
+    requests_limit=settings.rate_limit_requests,
+    window_seconds=settings.rate_limit_window
 )
+
+
+# Add CORS middleware with secure configuration
+cors_origins = settings.get_cors_origins()
+if cors_origins:
+    # Use configured origins
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=cors_origins,
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allow_headers=["Content-Type", "Authorization", "X-CSRF-Token"],
+    )
+elif settings.debug:
+    # In debug mode, allow localhost origins
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:8000", "http://127.0.0.1:8000"],
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allow_headers=["Content-Type", "Authorization", "X-CSRF-Token"],
+    )
+# If no origins configured and not in debug mode, CORS is not added (same-origin only)
 
 # Mount static files
 if STATIC_DIR.exists():
@@ -936,20 +1117,37 @@ async def login_submit(
     response: Response,
     username: str = Form(...),
     password: str = Form(...),
+    csrf_token: str = Form(default=""),
 ):
     """Handle login form submission."""
+    # Log failed login attempts (for security monitoring)
+    client_ip = request.headers.get("X-Forwarded-For", request.client.host if request.client else "unknown")
+
     if verify_credentials(username, password):
-        session_id = create_session(username)
+        session_id, csrf_token = create_session(username)
         response = RedirectResponse(url="/admin", status_code=303)
         response.set_cookie(
             key="session_id",
             value=session_id,
             httponly=True,
-            max_age=86400,  # 24 hours
-            samesite="lax",
+            max_age=settings.session_max_age,
+            samesite="strict",  # Stricter than "lax" for better CSRF protection
+            secure=not settings.debug,  # True in production (HTTPS only)
         )
-        logger.info(f"User '{username}' logged in")
+        # Set CSRF token in a separate cookie (readable by JavaScript)
+        response.set_cookie(
+            key="csrf_token",
+            value=csrf_token,
+            httponly=False,  # JavaScript needs to read this
+            max_age=settings.session_max_age,
+            samesite="strict",
+            secure=not settings.debug,
+        )
+        logger.info(f"User '{username}' logged in from {client_ip}")
         return response
+
+    # Log failed login attempt
+    logger.warning(f"Failed login attempt for user '{username}' from {client_ip}")
 
     # Invalid credentials
     if templates is None:
@@ -963,14 +1161,18 @@ async def login_submit(
 
 
 @app.get("/logout")
-async def logout(session_id: Optional[str] = Cookie(None, alias="session_id")):
+async def logout(request: Request, session_id: Optional[str] = Cookie(None, alias="session_id")):
     """Log out and clear session."""
+    client_ip = request.headers.get("X-Forwarded-For", request.client.host if request.client else "unknown")
+
     if session_id:
+        user = get_current_user(session_id)
         delete_session(session_id)
-        logger.info("User logged out")
+        logger.info(f"User '{user}' logged out from {client_ip}")
 
     response = RedirectResponse(url="/", status_code=303)
     response.delete_cookie("session_id")
+    response.delete_cookie("csrf_token")
     return response
 
 

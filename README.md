@@ -330,14 +330,82 @@ python run.py --help
 # Install development dependencies
 pip install -e ".[dev]"
 
-# Run tests
-pytest
-
 # Run with auto-reload via CLI
 lgl serve --reload
 
 # Check code style
 ruff check src/
+```
+
+## Testing
+
+The project includes a comprehensive pytest test suite with 293 tests covering all major modules.
+
+### Running Tests
+
+```bash
+# Install test dependencies
+pip install -e ".[dev]"
+
+# Run all tests
+pytest
+
+# Run with verbose output
+pytest -v
+
+# Run with coverage report
+pytest --cov=logic_guard_layer --cov-report=html
+
+# Run specific test file
+pytest tests/test_models.py
+
+# Run specific test class
+pytest tests/test_constraints.py::TestCheckPressureRange
+
+# Run tests matching a pattern
+pytest -k "parser"
+```
+
+### Test Structure
+
+| File | Tests | Coverage |
+|------|-------|----------|
+| `tests/conftest.py` | Shared fixtures | All modules |
+| `tests/test_models.py` | 62 tests | entities.py, responses.py |
+| `tests/test_constraints.py` | 53 tests | constraints.py |
+| `tests/test_ontology_manager.py` | 38 tests | manager.py |
+| `tests/test_parser.py` | 28 tests | parser.py |
+| `tests/test_reasoner.py` | 33 tests | reasoner.py |
+| `tests/test_corrector.py` | 23 tests | corrector.py |
+| `tests/test_orchestrator.py` | 26 tests | orchestrator.py |
+| `tests/test_api.py` | 30 tests | main.py (FastAPI) |
+
+### Test Categories
+
+- **Unit Tests**: Individual function and class testing
+- **Integration Tests**: Component interaction testing
+- **API Tests**: FastAPI endpoint testing with TestClient
+- **Async Tests**: Tests for async functions using pytest-asyncio
+
+### Writing Tests
+
+Tests use pytest fixtures defined in `tests/conftest.py`:
+
+```python
+import pytest
+
+def test_valid_component(sample_component):
+    """Test using a fixture from conftest.py"""
+    assert sample_component.name == "HP-001"
+    assert sample_component.operating_hours == 5000
+
+@pytest.mark.asyncio
+async def test_parser(mock_llm_client):
+    """Test async parser with mocked LLM client"""
+    from logic_guard_layer.core.parser import SemanticParser
+    parser = SemanticParser(mock_llm_client)
+    result = await parser.parse("Test text")
+    assert result is not None
 ```
 
 ## License

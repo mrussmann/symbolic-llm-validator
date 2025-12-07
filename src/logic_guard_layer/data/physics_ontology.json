@@ -1,0 +1,532 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Physics & Energy Equipment Ontology",
+  "description": "Industrial equipment ontology with physics-based constraints for energy market applications",
+  "version": "1.0.0",
+  "language": "en",
+
+  "definitions": {
+    "concepts": {
+      "Equipment": {
+        "description": "Industrial plant or machine",
+        "parent": null,
+        "children": ["RotatingMachine", "HeatTransferEquipment", "EnergyStorage", "PowerGeneration"]
+      },
+
+      "RotatingMachine": {
+        "description": "Rotating machine with shaft and bearings",
+        "parent": "Equipment",
+        "children": ["Pump", "Compressor", "Motor", "Generator"]
+      },
+      "Pump": {
+        "description": "Centrifugal pump or positive displacement pump",
+        "parent": "RotatingMachine",
+        "children": ["CentrifugalPump", "PositiveDisplacementPump"]
+      },
+      "CentrifugalPump": {
+        "description": "Centrifugal pump - fluid mechanics subject to cavitation",
+        "parent": "Pump",
+        "children": []
+      },
+      "PositiveDisplacementPump": {
+        "description": "Positive displacement pump",
+        "parent": "Pump",
+        "children": []
+      },
+      "Compressor": {
+        "description": "Compressor - isentropic compression thermodynamics",
+        "parent": "RotatingMachine",
+        "children": []
+      },
+      "Motor": {
+        "description": "Electric motor",
+        "parent": "RotatingMachine",
+        "children": []
+      },
+      "Generator": {
+        "description": "Electric generator",
+        "parent": "RotatingMachine",
+        "children": []
+      },
+
+      "HeatTransferEquipment": {
+        "description": "Heat transfer equipment",
+        "parent": "Equipment",
+        "children": ["HeatExchanger", "HeatPump", "Cooler"]
+      },
+      "HeatExchanger": {
+        "description": "Heat exchanger - energy balance Q_hot = Q_cold",
+        "parent": "HeatTransferEquipment",
+        "children": []
+      },
+      "HeatPump": {
+        "description": "Heat pump - COP limited by Carnot",
+        "parent": "HeatTransferEquipment",
+        "children": []
+      },
+      "Cooler": {
+        "description": "Cooler",
+        "parent": "HeatTransferEquipment",
+        "children": []
+      },
+
+      "EnergyStorage": {
+        "description": "Energy storage system",
+        "parent": "Equipment",
+        "children": ["BatteryStorage", "ThermalStorage", "HydrogenStorage"]
+      },
+      "BatteryStorage": {
+        "description": "Battery storage - SOC 0-100%, cycle limits",
+        "parent": "EnergyStorage",
+        "children": []
+      },
+      "ThermalStorage": {
+        "description": "Thermal storage",
+        "parent": "EnergyStorage",
+        "children": []
+      },
+      "HydrogenStorage": {
+        "description": "Hydrogen storage",
+        "parent": "EnergyStorage",
+        "children": []
+      },
+
+      "PowerGeneration": {
+        "description": "Power generation equipment",
+        "parent": "Equipment",
+        "children": ["GasTurbine", "WindTurbine", "SolarPanel", "CHP"]
+      },
+      "GasTurbine": {
+        "description": "Gas turbine - Brayton cycle efficiency",
+        "parent": "PowerGeneration",
+        "children": []
+      },
+      "WindTurbine": {
+        "description": "Wind turbine - Betz limit 59.3%",
+        "parent": "PowerGeneration",
+        "children": []
+      },
+      "SolarPanel": {
+        "description": "Photovoltaic system",
+        "parent": "PowerGeneration",
+        "children": []
+      },
+      "CHP": {
+        "description": "Combined Heat and Power (CHP)",
+        "parent": "PowerGeneration",
+        "children": []
+      }
+    },
+
+    "properties": {
+      "datatype": {
+        "operatingHours": {
+          "description": "Operating hours",
+          "domain": ["Equipment"],
+          "range": "integer",
+          "unit": "h",
+          "constraints": {
+            "minimum": 0
+          }
+        },
+        "maxLifetimeHours": {
+          "description": "Maximum lifespan in hours",
+          "domain": ["Equipment"],
+          "range": "integer",
+          "unit": "h",
+          "constraints": {
+            "minimum": 0
+          }
+        },
+        "efficiency": {
+          "description": "Efficiency (0-1 or 0-100%)",
+          "domain": ["Equipment"],
+          "range": "float",
+          "unit": "%",
+          "constraints": {
+            "minimum": 0,
+            "maximum": 100,
+            "physicalLaw": "First Law of Thermodynamics"
+          }
+        },
+        "npshAvailable": {
+          "description": "NPSH available - Net Positive Suction Head",
+          "domain": ["Pump", "CentrifugalPump"],
+          "range": "float",
+          "unit": "m",
+          "constraints": {
+            "minimum": 0
+          }
+        },
+        "npshRequired": {
+          "description": "NPSH required",
+          "domain": ["Pump", "CentrifugalPump"],
+          "range": "float",
+          "unit": "m",
+          "constraints": {
+            "minimum": 0
+          }
+        },
+        "inletTemperature": {
+          "description": "Inlet temperature",
+          "domain": ["Compressor", "HeatExchanger", "HeatPump"],
+          "range": "float",
+          "unit": "K",
+          "constraints": {
+            "minimum": 0
+          }
+        },
+        "outletTemperature": {
+          "description": "Outlet temperature",
+          "domain": ["Compressor", "HeatExchanger", "HeatPump"],
+          "range": "float",
+          "unit": "K",
+          "constraints": {
+            "minimum": 0
+          }
+        },
+        "pressureRatio": {
+          "description": "Pressure ratio",
+          "domain": ["Compressor", "GasTurbine"],
+          "range": "float",
+          "constraints": {
+            "minimum": 1
+          }
+        },
+        "heatCapacityRateHot": {
+          "description": "Heat capacity rate hot side (m_dot * cp)",
+          "domain": ["HeatExchanger"],
+          "range": "float",
+          "unit": "kW/K",
+          "constraints": {
+            "minimum": 0
+          }
+        },
+        "heatCapacityRateCold": {
+          "description": "Heat capacity rate cold side",
+          "domain": ["HeatExchanger"],
+          "range": "float",
+          "unit": "kW/K",
+          "constraints": {
+            "minimum": 0
+          }
+        },
+        "deltaT_hot": {
+          "description": "Temperature difference hot side",
+          "domain": ["HeatExchanger"],
+          "range": "float",
+          "unit": "K"
+        },
+        "deltaT_cold": {
+          "description": "Temperature difference cold side",
+          "domain": ["HeatExchanger"],
+          "range": "float",
+          "unit": "K"
+        },
+        "cop": {
+          "description": "Coefficient of Performance",
+          "domain": ["HeatPump"],
+          "range": "float",
+          "constraints": {
+            "minimum": 1,
+            "physicalLaw": "Second Law of Thermodynamics - Carnot Limit"
+          }
+        },
+        "sourceTemperature": {
+          "description": "Source temperature (ambient/ground)",
+          "domain": ["HeatPump"],
+          "range": "float",
+          "unit": "K",
+          "constraints": {
+            "minimum": 0
+          }
+        },
+        "sinkTemperature": {
+          "description": "Sink temperature (heating)",
+          "domain": ["HeatPump"],
+          "range": "float",
+          "unit": "K",
+          "constraints": {
+            "minimum": 0
+          }
+        },
+        "stateOfCharge": {
+          "description": "State of Charge (SOC)",
+          "domain": ["BatteryStorage"],
+          "range": "float",
+          "unit": "%",
+          "constraints": {
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "cycles": {
+          "description": "Charge cycles",
+          "domain": ["BatteryStorage"],
+          "range": "integer",
+          "constraints": {
+            "minimum": 0
+          }
+        },
+        "maxCycles": {
+          "description": "Maximum charge cycles",
+          "domain": ["BatteryStorage"],
+          "range": "integer",
+          "constraints": {
+            "minimum": 0
+          }
+        },
+        "capacity": {
+          "description": "Capacity",
+          "domain": ["BatteryStorage", "EnergyStorage"],
+          "range": "float",
+          "unit": "kWh",
+          "constraints": {
+            "minimum": 0
+          }
+        },
+        "powerInput": {
+          "description": "Input power",
+          "domain": ["Equipment"],
+          "range": "float",
+          "unit": "kW",
+          "constraints": {
+            "minimum": 0
+          }
+        },
+        "powerOutput": {
+          "description": "Output power",
+          "domain": ["Equipment"],
+          "range": "float",
+          "unit": "kW",
+          "constraints": {
+            "minimum": 0
+          }
+        },
+        "hydraulicPower": {
+          "description": "Hydraulic power",
+          "domain": ["Pump"],
+          "range": "float",
+          "unit": "kW",
+          "constraints": {
+            "minimum": 0
+          }
+        },
+        "ratedPower": {
+          "description": "Rated power",
+          "domain": ["PowerGeneration", "Motor", "Generator"],
+          "range": "float",
+          "unit": "kW",
+          "constraints": {
+            "minimum": 0
+          }
+        },
+        "rotorDiameter": {
+          "description": "Rotor diameter",
+          "domain": ["WindTurbine"],
+          "range": "float",
+          "unit": "m",
+          "constraints": {
+            "minimum": 0
+          }
+        },
+        "windSpeed": {
+          "description": "Wind speed",
+          "domain": ["WindTurbine"],
+          "range": "float",
+          "unit": "m/s",
+          "constraints": {
+            "minimum": 0
+          }
+        },
+        "isentropicExponent": {
+          "description": "Isentropic exponent (kappa/gamma)",
+          "domain": ["Compressor", "GasTurbine"],
+          "range": "float",
+          "constraints": {
+            "minimum": 1,
+            "maximum": 1.7
+          }
+        }
+      },
+      "object": {
+        "connectedTo": {
+          "description": "Connected to",
+          "domain": ["Equipment"],
+          "range": ["Equipment"]
+        },
+        "controlledBy": {
+          "description": "Controlled by",
+          "domain": ["Equipment"],
+          "range": ["Controller"]
+        },
+        "partOf": {
+          "description": "Part of (System)",
+          "domain": ["Equipment"],
+          "range": ["System"]
+        }
+      }
+    },
+
+    "constraints": [
+      {
+        "id": "C1",
+        "name": "Operating hours positive",
+        "type": "range",
+        "expression": "operating_hours >= 0",
+        "description": "Operating hours must be positive"
+      },
+      {
+        "id": "C2",
+        "name": "Lifespan limit",
+        "type": "temporal",
+        "expression": "operating_hours <= max_lifetime_hours",
+        "description": "Operating hours must not exceed maximum lifespan"
+      },
+      {
+        "id": "C3",
+        "name": "First Law of Thermodynamics",
+        "type": "physical",
+        "expression": "0 <= efficiency <= 100",
+        "physicalLaw": "First Law of Thermodynamics",
+        "description": "Efficiency between 0% and 100% (energy conservation)"
+      },
+      {
+        "id": "C4",
+        "name": "NPSH Cavitation Protection",
+        "type": "physical",
+        "expression": "npsh_available > npsh_required",
+        "physicalLaw": "Bernoulli Equation / Vapor Pressure",
+        "description": "NPSH available must be greater than NPSH required to prevent cavitation"
+      },
+      {
+        "id": "C5",
+        "name": "Heat Exchanger Energy Balance",
+        "type": "physical",
+        "expression": "Q_hot ≈ Q_cold (within tolerance)",
+        "physicalLaw": "First Law of Thermodynamics",
+        "description": "Heat transfer: Heat released ≈ Heat absorbed"
+      },
+      {
+        "id": "C6",
+        "name": "Isentropic Compression",
+        "type": "physical",
+        "expression": "T_out >= T_in * (P_ratio)^((gamma-1)/gamma)",
+        "physicalLaw": "Isentropic Process",
+        "description": "Outlet temperature during compression must be thermodynamically consistent"
+      },
+      {
+        "id": "C7",
+        "name": "Pump Power",
+        "type": "physical",
+        "expression": "P_hydraulic <= P_input * efficiency",
+        "physicalLaw": "Energy Conservation",
+        "description": "Hydraulic power cannot exceed input power times efficiency"
+      },
+      {
+        "id": "C8",
+        "name": "Battery SOC",
+        "type": "range",
+        "expression": "0 <= soc <= 100",
+        "description": "State of charge must be between 0% and 100%"
+      },
+      {
+        "id": "C9",
+        "name": "Battery Cycles",
+        "type": "temporal",
+        "expression": "cycles <= max_cycles",
+        "description": "Charge cycles must not exceed maximum"
+      },
+      {
+        "id": "C10",
+        "name": "Heat Pump Carnot Limit",
+        "type": "physical",
+        "expression": "COP <= T_sink / (T_sink - T_source)",
+        "physicalLaw": "Second Law of Thermodynamics - Carnot Cycle",
+        "description": "COP of a heat pump cannot exceed Carnot efficiency"
+      },
+      {
+        "id": "C11",
+        "name": "Wind Turbine Betz Limit",
+        "type": "physical",
+        "expression": "cp <= 0.593",
+        "physicalLaw": "Betz Law",
+        "description": "Power coefficient of a wind turbine cannot exceed 59.3% (Betz limit)"
+      },
+      {
+        "id": "C12",
+        "name": "Temperature positive (Kelvin)",
+        "type": "physical",
+        "expression": "T >= 0 K",
+        "physicalLaw": "Third Law of Thermodynamics",
+        "description": "Absolute temperature must be positive"
+      },
+      {
+        "id": "C13",
+        "name": "Pressure ratio",
+        "type": "physical",
+        "expression": "pressure_ratio >= 1",
+        "description": "Pressure ratio during compression must be >= 1"
+      },
+      {
+        "id": "C14",
+        "name": "Power output",
+        "type": "physical",
+        "expression": "power_output <= power_input * efficiency",
+        "physicalLaw": "Energy Conservation",
+        "description": "Output power cannot exceed input power times efficiency"
+      },
+      {
+        "id": "C15",
+        "name": "Gas Turbine Efficiency",
+        "type": "physical",
+        "expression": "efficiency <= 1 - (1/pressure_ratio)^((gamma-1)/gamma)",
+        "physicalLaw": "Brayton Cycle",
+        "description": "Gas turbine efficiency limited by Brayton cycle"
+      },
+      {
+        "id": "C16",
+        "name": "Capacity positive",
+        "type": "range",
+        "expression": "capacity >= 0",
+        "description": "Storage capacity must be positive"
+      }
+    ]
+  },
+
+  "examples": {
+    "gasTurbine": {
+      "type": "GasTurbine",
+      "operatingHours": 45000,
+      "maxLifetimeHours": 100000,
+      "efficiency": 42,
+      "pressureRatio": 18,
+      "inletTemperature": 288,
+      "outletTemperature": 823
+    },
+    "centrifugalPump": {
+      "type": "CentrifugalPump",
+      "operatingHours": 12000,
+      "npshAvailable": 8,
+      "npshRequired": 5,
+      "hydraulicPower": 45,
+      "powerInput": 55,
+      "efficiency": 82
+    },
+    "heatPump": {
+      "type": "HeatPump",
+      "cop": 4.2,
+      "sourceTemperature": 283,
+      "sinkTemperature": 308,
+      "powerInput": 5,
+      "powerOutput": 21
+    },
+    "batteryStorage": {
+      "type": "BatteryStorage",
+      "capacity": 100,
+      "stateOfCharge": 78,
+      "cycles": 1500,
+      "maxCycles": 6000
+    }
+  }
+}

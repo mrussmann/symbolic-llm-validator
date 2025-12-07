@@ -6,7 +6,12 @@
       "Bash(python -m pip:*)",
       "Bash(chmod:*)",
       "Bash(pgrep:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(tree:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(cat:*)",
+      "Bash(python3:*)"
     ],
     "deny": [],
     "ask": []
