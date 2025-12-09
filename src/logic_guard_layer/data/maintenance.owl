@@ -6,12 +6,14 @@
      xmlns:xml="http://www.w3.org/XML/1998/namespace"
      xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
      xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+     xmlns:swrl="http://www.w3.org/2003/11/swrl#"
+     xmlns:swrlb="http://www.w3.org/2003/11/swrlb#"
      xmlns:maintenance="http://logic-guard-layer.ai/ontology/maintenance#">
 
     <owl:Ontology rdf:about="http://logic-guard-layer.ai/ontology/maintenance">
         <rdfs:label>Maintenance Domain Ontology</rdfs:label>
-        <rdfs:comment>Ontology for technical maintenance domain validation in Logic-Guard-Layer</rdfs:comment>
-        <owl:versionInfo>1.0.0</owl:versionInfo>
+        <rdfs:comment>Ontology for technical maintenance domain validation in Logic-Guard-Layer with physics-based constraints</rdfs:comment>
+        <owl:versionInfo>2.0.0</owl:versionInfo>
     </owl:Ontology>
 
     <!-- ==================== CLASSES ==================== -->
@@ -20,6 +22,52 @@
     <owl:Class rdf:about="#Komponente">
         <rdfs:label>Komponente</rdfs:label>
         <rdfs:comment>Base class for all technical components</rdfs:comment>
+    </owl:Class>
+
+    <!-- Violation Marker Classes (inferred by reasoner) -->
+    <owl:Class rdf:about="#ConstraintViolation">
+        <rdfs:label>Constraint Violation</rdfs:label>
+        <rdfs:comment>Marker class for components that violate constraints</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#RangeViolation">
+        <rdfs:subClassOf rdf:resource="#ConstraintViolation"/>
+        <rdfs:label>Range Violation</rdfs:label>
+    </owl:Class>
+
+    <owl:Class rdf:about="#PhysicsViolation">
+        <rdfs:subClassOf rdf:resource="#ConstraintViolation"/>
+        <rdfs:label>Physics Violation</rdfs:label>
+    </owl:Class>
+
+    <owl:Class rdf:about="#CavitationRisk">
+        <rdfs:subClassOf rdf:resource="#PhysicsViolation"/>
+        <rdfs:label>Cavitation Risk</rdfs:label>
+        <rdfs:comment>NPSH available less than NPSH required</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#CarnotViolation">
+        <rdfs:subClassOf rdf:resource="#PhysicsViolation"/>
+        <rdfs:label>Carnot Limit Violation</rdfs:label>
+        <rdfs:comment>COP exceeds Carnot limit</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#EfficiencyViolation">
+        <rdfs:subClassOf rdf:resource="#PhysicsViolation"/>
+        <rdfs:label>Efficiency Violation</rdfs:label>
+        <rdfs:comment>Efficiency exceeds 100%</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#LifespanExceeded">
+        <rdfs:subClassOf rdf:resource="#RangeViolation"/>
+        <rdfs:label>Lifespan Exceeded</rdfs:label>
+        <rdfs:comment>Operating hours exceed maximum lifespan</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#NegativeValue">
+        <rdfs:subClassOf rdf:resource="#RangeViolation"/>
+        <rdfs:label>Negative Value</rdfs:label>
+        <rdfs:comment>Value that must be non-negative is negative</rdfs:comment>
     </owl:Class>
 
     <!-- Rotating Components -->
@@ -43,6 +91,12 @@
         <rdfs:label>Pumpe</rdfs:label>
     </owl:Class>
 
+    <owl:Class rdf:about="#Kreiselpumpe">
+        <rdfs:subClassOf rdf:resource="#Pumpe"/>
+        <rdfs:label>Kreiselpumpe</rdfs:label>
+        <rdfs:comment>Centrifugal pump - subject to cavitation</rdfs:comment>
+    </owl:Class>
+
     <owl:Class rdf:about="#Hydraulikpumpe">
         <rdfs:subClassOf rdf:resource="#Pumpe"/>
         <rdfs:label>Hydraulikpumpe</rdfs:label>
@@ -51,6 +105,42 @@
     <owl:Class rdf:about="#Vakuumpumpe">
         <rdfs:subClassOf rdf:resource="#Pumpe"/>
         <rdfs:label>Vakuumpumpe</rdfs:label>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Kompressor">
+        <rdfs:subClassOf rdf:resource="#RotierendeKomponente"/>
+        <rdfs:label>Kompressor</rdfs:label>
+        <rdfs:comment>Compressor - isentropic compression thermodynamics</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Generator">
+        <rdfs:subClassOf rdf:resource="#RotierendeKomponente"/>
+        <rdfs:label>Generator</rdfs:label>
+    </owl:Class>
+
+    <!-- Heat Transfer Equipment -->
+    <owl:Class rdf:about="#Waermetauscher">
+        <rdfs:subClassOf rdf:resource="#Komponente"/>
+        <rdfs:label>Wärmetauscher</rdfs:label>
+        <rdfs:comment>Heat exchanger - energy balance Q_hot = Q_cold</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Waermepumpe">
+        <rdfs:subClassOf rdf:resource="#Komponente"/>
+        <rdfs:label>Wärmepumpe</rdfs:label>
+        <rdfs:comment>Heat pump - COP limited by Carnot</rdfs:comment>
+    </owl:Class>
+
+    <!-- Energy Storage -->
+    <owl:Class rdf:about="#Energiespeicher">
+        <rdfs:subClassOf rdf:resource="#Komponente"/>
+        <rdfs:label>Energiespeicher</rdfs:label>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Batteriespeicher">
+        <rdfs:subClassOf rdf:resource="#Energiespeicher"/>
+        <rdfs:label>Batteriespeicher</rdfs:label>
+        <rdfs:comment>Battery storage - SOC 0-100%, cycle limits</rdfs:comment>
     </owl:Class>
 
     <!-- Static Components -->
@@ -95,6 +185,24 @@
         <rdfs:label>Temperatursensor</rdfs:label>
     </owl:Class>
 
+    <!-- Power Generation -->
+    <owl:Class rdf:about="#Stromerzeugung">
+        <rdfs:subClassOf rdf:resource="#Komponente"/>
+        <rdfs:label>Stromerzeugung</rdfs:label>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Windturbine">
+        <rdfs:subClassOf rdf:resource="#Stromerzeugung"/>
+        <rdfs:label>Windturbine</rdfs:label>
+        <rdfs:comment>Wind turbine - Betz limit 59.3%</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Gasturbine">
+        <rdfs:subClassOf rdf:resource="#Stromerzeugung"/>
+        <rdfs:label>Gasturbine</rdfs:label>
+        <rdfs:comment>Gas turbine - Brayton cycle efficiency</rdfs:comment>
+    </owl:Class>
+
     <!-- Events -->
     <owl:Class rdf:about="#Ereignis">
         <rdfs:label>Ereignis</rdfs:label>
@@ -115,6 +223,24 @@
         <rdfs:subClassOf rdf:resource="#Ereignis"/>
         <rdfs:label>Messereignis</rdfs:label>
     </owl:Class>
+
+    <!-- Disjoint Classes -->
+    <owl:AllDisjointClasses>
+        <owl:members rdf:parseType="Collection">
+            <rdf:Description rdf:about="#Wartungsereignis"/>
+            <rdf:Description rdf:about="#Ausfallereignis"/>
+            <rdf:Description rdf:about="#Messereignis"/>
+        </owl:members>
+    </owl:AllDisjointClasses>
+
+    <owl:AllDisjointClasses>
+        <owl:members rdf:parseType="Collection">
+            <rdf:Description rdf:about="#Pumpe"/>
+            <rdf:Description rdf:about="#Motor"/>
+            <rdf:Description rdf:about="#Sensor"/>
+            <rdf:Description rdf:about="#Ventil"/>
+        </owl:members>
+    </owl:AllDisjointClasses>
 
     <!-- Other -->
     <owl:Class rdf:about="#Anlage">
@@ -154,27 +280,64 @@
         <rdfs:label>durchgeführt von</rdfs:label>
     </owl:ObjectProperty>
 
+    <owl:ObjectProperty rdf:about="#hatViolation">
+        <rdfs:domain rdf:resource="#Komponente"/>
+        <rdfs:range rdf:resource="#ConstraintViolation"/>
+        <rdfs:label>hat Violation</rdfs:label>
+        <rdfs:comment>Links component to its constraint violations</rdfs:comment>
+    </owl:ObjectProperty>
+
     <!-- ==================== DATATYPE PROPERTIES ==================== -->
 
+    <!-- Operating Hours with range constraint >= 0 -->
     <owl:DatatypeProperty rdf:about="#hatBetriebsstunden">
         <rdfs:domain rdf:resource="#Komponente"/>
-        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#integer"/>
+        <rdfs:range>
+            <rdfs:Datatype>
+                <owl:onDatatype rdf:resource="http://www.w3.org/2001/XMLSchema#integer"/>
+                <owl:withRestrictions rdf:parseType="Collection">
+                    <rdf:Description>
+                        <xsd:minInclusive rdf:datatype="http://www.w3.org/2001/XMLSchema#integer">0</xsd:minInclusive>
+                    </rdf:Description>
+                </owl:withRestrictions>
+            </rdfs:Datatype>
+        </rdfs:range>
         <rdfs:label>hat Betriebsstunden</rdfs:label>
         <rdfs:comment>Operating hours of the component (must be >= 0)</rdfs:comment>
     </owl:DatatypeProperty>
 
+    <!-- Max Lifespan with range constraint > 0 -->
     <owl:DatatypeProperty rdf:about="#hatMaxLebensdauer">
         <rdfs:domain rdf:resource="#Komponente"/>
-        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#integer"/>
+        <rdfs:range>
+            <rdfs:Datatype>
+                <owl:onDatatype rdf:resource="http://www.w3.org/2001/XMLSchema#integer"/>
+                <owl:withRestrictions rdf:parseType="Collection">
+                    <rdf:Description>
+                        <xsd:minExclusive rdf:datatype="http://www.w3.org/2001/XMLSchema#integer">0</xsd:minExclusive>
+                    </rdf:Description>
+                </owl:withRestrictions>
+            </rdfs:Datatype>
+        </rdfs:range>
         <rdfs:label>hat maximale Lebensdauer</rdfs:label>
         <rdfs:comment>Maximum lifespan in hours (must be > 0)</rdfs:comment>
     </owl:DatatypeProperty>
 
+    <!-- Maintenance Interval with range constraint > 0 -->
     <owl:DatatypeProperty rdf:about="#hatWartungsintervall">
         <rdfs:domain rdf:resource="#Komponente"/>
-        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#integer"/>
+        <rdfs:range>
+            <rdfs:Datatype>
+                <owl:onDatatype rdf:resource="http://www.w3.org/2001/XMLSchema#integer"/>
+                <owl:withRestrictions rdf:parseType="Collection">
+                    <rdf:Description>
+                        <xsd:minExclusive rdf:datatype="http://www.w3.org/2001/XMLSchema#integer">0</xsd:minExclusive>
+                    </rdf:Description>
+                </owl:withRestrictions>
+            </rdfs:Datatype>
+        </rdfs:range>
         <rdfs:label>hat Wartungsintervall</rdfs:label>
-        <rdfs:comment>Maintenance interval in hours (must be > 0 and <= max lifespan)</rdfs:comment>
+        <rdfs:comment>Maintenance interval in hours (must be > 0 and &lt;= max lifespan)</rdfs:comment>
     </owl:DatatypeProperty>
 
     <owl:DatatypeProperty rdf:about="#hatSeriennummer">
@@ -183,16 +346,42 @@
         <rdfs:label>hat Seriennummer</rdfs:label>
     </owl:DatatypeProperty>
 
+    <!-- Pressure with range 0-350 bar for standard hydraulics -->
     <owl:DatatypeProperty rdf:about="#hatDruckBar">
         <rdfs:domain rdf:resource="#Komponente"/>
-        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#float"/>
+        <rdfs:range>
+            <rdfs:Datatype>
+                <owl:onDatatype rdf:resource="http://www.w3.org/2001/XMLSchema#float"/>
+                <owl:withRestrictions rdf:parseType="Collection">
+                    <rdf:Description>
+                        <xsd:minInclusive rdf:datatype="http://www.w3.org/2001/XMLSchema#float">0</xsd:minInclusive>
+                    </rdf:Description>
+                    <rdf:Description>
+                        <xsd:maxInclusive rdf:datatype="http://www.w3.org/2001/XMLSchema#float">350</xsd:maxInclusive>
+                    </rdf:Description>
+                </owl:withRestrictions>
+            </rdfs:Datatype>
+        </rdfs:range>
         <rdfs:label>hat Druck (bar)</rdfs:label>
         <rdfs:comment>Pressure in bar (standard hydraulics: 0-350 bar)</rdfs:comment>
     </owl:DatatypeProperty>
 
+    <!-- Temperature with typical range -40 to 150 C -->
     <owl:DatatypeProperty rdf:about="#hatTemperaturC">
         <rdfs:domain rdf:resource="#Komponente"/>
-        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#float"/>
+        <rdfs:range>
+            <rdfs:Datatype>
+                <owl:onDatatype rdf:resource="http://www.w3.org/2001/XMLSchema#float"/>
+                <owl:withRestrictions rdf:parseType="Collection">
+                    <rdf:Description>
+                        <xsd:minInclusive rdf:datatype="http://www.w3.org/2001/XMLSchema#float">-40</xsd:minInclusive>
+                    </rdf:Description>
+                    <rdf:Description>
+                        <xsd:maxInclusive rdf:datatype="http://www.w3.org/2001/XMLSchema#float">150</xsd:maxInclusive>
+                    </rdf:Description>
+                </owl:withRestrictions>
+            </rdfs:Datatype>
+        </rdfs:range>
         <rdfs:label>hat Temperatur (°C)</rdfs:label>
         <rdfs:comment>Temperature in Celsius (typical range: -40 to +150)</rdfs:comment>
     </owl:DatatypeProperty>
@@ -203,9 +392,22 @@
         <rdfs:label>hat Datum</rdfs:label>
     </owl:DatatypeProperty>
 
+    <!-- RPM with range 0-10000 -->
     <owl:DatatypeProperty rdf:about="#hatDrehzahl">
         <rdfs:domain rdf:resource="#RotierendeKomponente"/>
-        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#integer"/>
+        <rdfs:range>
+            <rdfs:Datatype>
+                <owl:onDatatype rdf:resource="http://www.w3.org/2001/XMLSchema#integer"/>
+                <owl:withRestrictions rdf:parseType="Collection">
+                    <rdf:Description>
+                        <xsd:minInclusive rdf:datatype="http://www.w3.org/2001/XMLSchema#integer">0</xsd:minInclusive>
+                    </rdf:Description>
+                    <rdf:Description>
+                        <xsd:maxInclusive rdf:datatype="http://www.w3.org/2001/XMLSchema#integer">10000</xsd:maxInclusive>
+                    </rdf:Description>
+                </owl:withRestrictions>
+            </rdfs:Datatype>
+        </rdfs:range>
         <rdfs:label>hat Drehzahl (rpm)</rdfs:label>
         <rdfs:comment>Rotation speed in RPM (typically 0-10000)</rdfs:comment>
     </owl:DatatypeProperty>
@@ -215,6 +417,248 @@
         <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
         <rdfs:label>hat Status</rdfs:label>
         <rdfs:comment>Status of the component (aktiv, defekt, wartung)</rdfs:comment>
+    </owl:DatatypeProperty>
+
+    <!-- Efficiency 0-100% (First Law of Thermodynamics) -->
+    <owl:DatatypeProperty rdf:about="#hatWirkungsgrad">
+        <rdfs:domain rdf:resource="#Komponente"/>
+        <rdfs:range>
+            <rdfs:Datatype>
+                <owl:onDatatype rdf:resource="http://www.w3.org/2001/XMLSchema#float"/>
+                <owl:withRestrictions rdf:parseType="Collection">
+                    <rdf:Description>
+                        <xsd:minInclusive rdf:datatype="http://www.w3.org/2001/XMLSchema#float">0</xsd:minInclusive>
+                    </rdf:Description>
+                    <rdf:Description>
+                        <xsd:maxInclusive rdf:datatype="http://www.w3.org/2001/XMLSchema#float">100</xsd:maxInclusive>
+                    </rdf:Description>
+                </owl:withRestrictions>
+            </rdfs:Datatype>
+        </rdfs:range>
+        <rdfs:label>hat Wirkungsgrad (%)</rdfs:label>
+        <rdfs:comment>Efficiency in percent (0-100%, First Law of Thermodynamics)</rdfs:comment>
+    </owl:DatatypeProperty>
+
+    <!-- NPSH Available -->
+    <owl:DatatypeProperty rdf:about="#hatNPSHverfuegbar">
+        <rdfs:domain rdf:resource="#Pumpe"/>
+        <rdfs:range>
+            <rdfs:Datatype>
+                <owl:onDatatype rdf:resource="http://www.w3.org/2001/XMLSchema#float"/>
+                <owl:withRestrictions rdf:parseType="Collection">
+                    <rdf:Description>
+                        <xsd:minInclusive rdf:datatype="http://www.w3.org/2001/XMLSchema#float">0</xsd:minInclusive>
+                    </rdf:Description>
+                </owl:withRestrictions>
+            </rdfs:Datatype>
+        </rdfs:range>
+        <rdfs:label>hat NPSH verfügbar (m)</rdfs:label>
+        <rdfs:comment>Net Positive Suction Head available in meters</rdfs:comment>
+    </owl:DatatypeProperty>
+
+    <!-- NPSH Required -->
+    <owl:DatatypeProperty rdf:about="#hatNPSHerforderlich">
+        <rdfs:domain rdf:resource="#Pumpe"/>
+        <rdfs:range>
+            <rdfs:Datatype>
+                <owl:onDatatype rdf:resource="http://www.w3.org/2001/XMLSchema#float"/>
+                <owl:withRestrictions rdf:parseType="Collection">
+                    <rdf:Description>
+                        <xsd:minInclusive rdf:datatype="http://www.w3.org/2001/XMLSchema#float">0</xsd:minInclusive>
+                    </rdf:Description>
+                </owl:withRestrictions>
+            </rdfs:Datatype>
+        </rdfs:range>
+        <rdfs:label>hat NPSH erforderlich (m)</rdfs:label>
+        <rdfs:comment>Net Positive Suction Head required in meters</rdfs:comment>
+    </owl:DatatypeProperty>
+
+    <!-- COP for heat pumps -->
+    <owl:DatatypeProperty rdf:about="#hatCOP">
+        <rdfs:domain rdf:resource="#Waermepumpe"/>
+        <rdfs:range>
+            <rdfs:Datatype>
+                <owl:onDatatype rdf:resource="http://www.w3.org/2001/XMLSchema#float"/>
+                <owl:withRestrictions rdf:parseType="Collection">
+                    <rdf:Description>
+                        <xsd:minExclusive rdf:datatype="http://www.w3.org/2001/XMLSchema#float">0</xsd:minExclusive>
+                    </rdf:Description>
+                </owl:withRestrictions>
+            </rdfs:Datatype>
+        </rdfs:range>
+        <rdfs:label>hat COP</rdfs:label>
+        <rdfs:comment>Coefficient of Performance (must be > 0, limited by Carnot)</rdfs:comment>
+    </owl:DatatypeProperty>
+
+    <!-- Source/Sink temperatures for heat pump -->
+    <owl:DatatypeProperty rdf:about="#hatQuelltemperatur">
+        <rdfs:domain rdf:resource="#Waermepumpe"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#float"/>
+        <rdfs:label>hat Quelltemperatur (°C)</rdfs:label>
+        <rdfs:comment>Source temperature (ambient/ground) in Celsius</rdfs:comment>
+    </owl:DatatypeProperty>
+
+    <owl:DatatypeProperty rdf:about="#hatVorlauftemperatur">
+        <rdfs:domain rdf:resource="#Waermepumpe"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#float"/>
+        <rdfs:label>hat Vorlauftemperatur (°C)</rdfs:label>
+        <rdfs:comment>Sink/flow temperature (heating water) in Celsius</rdfs:comment>
+    </owl:DatatypeProperty>
+
+    <!-- Battery SOC 0-100% -->
+    <owl:DatatypeProperty rdf:about="#hatLadezustand">
+        <rdfs:domain rdf:resource="#Batteriespeicher"/>
+        <rdfs:range>
+            <rdfs:Datatype>
+                <owl:onDatatype rdf:resource="http://www.w3.org/2001/XMLSchema#float"/>
+                <owl:withRestrictions rdf:parseType="Collection">
+                    <rdf:Description>
+                        <xsd:minInclusive rdf:datatype="http://www.w3.org/2001/XMLSchema#float">0</xsd:minInclusive>
+                    </rdf:Description>
+                    <rdf:Description>
+                        <xsd:maxInclusive rdf:datatype="http://www.w3.org/2001/XMLSchema#float">100</xsd:maxInclusive>
+                    </rdf:Description>
+                </owl:withRestrictions>
+            </rdfs:Datatype>
+        </rdfs:range>
+        <rdfs:label>hat Ladezustand (%)</rdfs:label>
+        <rdfs:comment>State of Charge in percent (0-100%)</rdfs:comment>
+    </owl:DatatypeProperty>
+
+    <!-- Battery cycles -->
+    <owl:DatatypeProperty rdf:about="#hatLadezyklen">
+        <rdfs:domain rdf:resource="#Batteriespeicher"/>
+        <rdfs:range>
+            <rdfs:Datatype>
+                <owl:onDatatype rdf:resource="http://www.w3.org/2001/XMLSchema#integer"/>
+                <owl:withRestrictions rdf:parseType="Collection">
+                    <rdf:Description>
+                        <xsd:minInclusive rdf:datatype="http://www.w3.org/2001/XMLSchema#integer">0</xsd:minInclusive>
+                    </rdf:Description>
+                </owl:withRestrictions>
+            </rdfs:Datatype>
+        </rdfs:range>
+        <rdfs:label>hat Ladezyklen</rdfs:label>
+        <rdfs:comment>Number of charge cycles</rdfs:comment>
+    </owl:DatatypeProperty>
+
+    <owl:DatatypeProperty rdf:about="#hatMaxLadezyklen">
+        <rdfs:domain rdf:resource="#Batteriespeicher"/>
+        <rdfs:range>
+            <rdfs:Datatype>
+                <owl:onDatatype rdf:resource="http://www.w3.org/2001/XMLSchema#integer"/>
+                <owl:withRestrictions rdf:parseType="Collection">
+                    <rdf:Description>
+                        <xsd:minExclusive rdf:datatype="http://www.w3.org/2001/XMLSchema#integer">0</xsd:minExclusive>
+                    </rdf:Description>
+                </owl:withRestrictions>
+            </rdfs:Datatype>
+        </rdfs:range>
+        <rdfs:label>hat maximale Ladezyklen</rdfs:label>
+        <rdfs:comment>Maximum number of charge cycles</rdfs:comment>
+    </owl:DatatypeProperty>
+
+    <!-- Power properties -->
+    <owl:DatatypeProperty rdf:about="#hatLeistungsaufnahme">
+        <rdfs:domain rdf:resource="#Komponente"/>
+        <rdfs:range>
+            <rdfs:Datatype>
+                <owl:onDatatype rdf:resource="http://www.w3.org/2001/XMLSchema#float"/>
+                <owl:withRestrictions rdf:parseType="Collection">
+                    <rdf:Description>
+                        <xsd:minInclusive rdf:datatype="http://www.w3.org/2001/XMLSchema#float">0</xsd:minInclusive>
+                    </rdf:Description>
+                </owl:withRestrictions>
+            </rdfs:Datatype>
+        </rdfs:range>
+        <rdfs:label>hat Leistungsaufnahme (kW)</rdfs:label>
+        <rdfs:comment>Power input in kW</rdfs:comment>
+    </owl:DatatypeProperty>
+
+    <owl:DatatypeProperty rdf:about="#hatHydraulikleistung">
+        <rdfs:domain rdf:resource="#Pumpe"/>
+        <rdfs:range>
+            <rdfs:Datatype>
+                <owl:onDatatype rdf:resource="http://www.w3.org/2001/XMLSchema#float"/>
+                <owl:withRestrictions rdf:parseType="Collection">
+                    <rdf:Description>
+                        <xsd:minInclusive rdf:datatype="http://www.w3.org/2001/XMLSchema#float">0</xsd:minInclusive>
+                    </rdf:Description>
+                </owl:withRestrictions>
+            </rdfs:Datatype>
+        </rdfs:range>
+        <rdfs:label>hat Hydraulikleistung (kW)</rdfs:label>
+        <rdfs:comment>Hydraulic power output in kW</rdfs:comment>
+    </owl:DatatypeProperty>
+
+    <!-- Compressor properties -->
+    <owl:DatatypeProperty rdf:about="#hatEingangstemperatur">
+        <rdfs:domain rdf:resource="#Kompressor"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#float"/>
+        <rdfs:label>hat Eingangstemperatur (°C)</rdfs:label>
+    </owl:DatatypeProperty>
+
+    <owl:DatatypeProperty rdf:about="#hatAusgangstemperatur">
+        <rdfs:domain rdf:resource="#Kompressor"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#float"/>
+        <rdfs:label>hat Ausgangstemperatur (°C)</rdfs:label>
+    </owl:DatatypeProperty>
+
+    <owl:DatatypeProperty rdf:about="#hatEingangsdruck">
+        <rdfs:domain rdf:resource="#Kompressor"/>
+        <rdfs:range>
+            <rdfs:Datatype>
+                <owl:onDatatype rdf:resource="http://www.w3.org/2001/XMLSchema#float"/>
+                <owl:withRestrictions rdf:parseType="Collection">
+                    <rdf:Description>
+                        <xsd:minExclusive rdf:datatype="http://www.w3.org/2001/XMLSchema#float">0</xsd:minExclusive>
+                    </rdf:Description>
+                </owl:withRestrictions>
+            </rdfs:Datatype>
+        </rdfs:range>
+        <rdfs:label>hat Eingangsdruck (bar)</rdfs:label>
+    </owl:DatatypeProperty>
+
+    <owl:DatatypeProperty rdf:about="#hatAusgangsdruck">
+        <rdfs:domain rdf:resource="#Kompressor"/>
+        <rdfs:range>
+            <rdfs:Datatype>
+                <owl:onDatatype rdf:resource="http://www.w3.org/2001/XMLSchema#float"/>
+                <owl:withRestrictions rdf:parseType="Collection">
+                    <rdf:Description>
+                        <xsd:minExclusive rdf:datatype="http://www.w3.org/2001/XMLSchema#float">0</xsd:minExclusive>
+                    </rdf:Description>
+                </owl:withRestrictions>
+            </rdfs:Datatype>
+        </rdfs:range>
+        <rdfs:label>hat Ausgangsdruck (bar)</rdfs:label>
+    </owl:DatatypeProperty>
+
+    <!-- Wind turbine power coefficient (Betz limit) -->
+    <owl:DatatypeProperty rdf:about="#hatLeistungsbeiwert">
+        <rdfs:domain rdf:resource="#Windturbine"/>
+        <rdfs:range>
+            <rdfs:Datatype>
+                <owl:onDatatype rdf:resource="http://www.w3.org/2001/XMLSchema#float"/>
+                <owl:withRestrictions rdf:parseType="Collection">
+                    <rdf:Description>
+                        <xsd:minInclusive rdf:datatype="http://www.w3.org/2001/XMLSchema#float">0</xsd:minInclusive>
+                    </rdf:Description>
+                    <rdf:Description>
+                        <xsd:maxInclusive rdf:datatype="http://www.w3.org/2001/XMLSchema#float">0.593</xsd:maxInclusive>
+                    </rdf:Description>
+                </owl:withRestrictions>
+            </rdfs:Datatype>
+        </rdfs:range>
+        <rdfs:label>hat Leistungsbeiwert (Cp)</rdfs:label>
+        <rdfs:comment>Power coefficient limited by Betz law (max 0.593)</rdfs:comment>
+    </owl:DatatypeProperty>
+
+    <!-- Violation message property -->
+    <owl:DatatypeProperty rdf:about="#hatViolationMessage">
+        <rdfs:domain rdf:resource="#ConstraintViolation"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+        <rdfs:label>hat Violation Message</rdfs:label>
     </owl:DatatypeProperty>
 
 </rdf:RDF>

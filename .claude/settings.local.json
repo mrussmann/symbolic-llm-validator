@@ -11,7 +11,12 @@
       "Bash(find:*)",
       "Bash(grep:*)",
       "Bash(cat:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(pip cache:*)",
+      "Bash(pip uninstall:*)",
+      "Bash(ldd:*)",
+      "WebSearch",
+      "Bash(wc:*)"
     ],
     "deny": [],
     "ask": []

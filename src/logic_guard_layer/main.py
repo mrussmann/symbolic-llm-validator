@@ -515,12 +515,17 @@ async def validate_text_stream(request: ValidationRequest, session_id: Optional[
                 "data": json.dumps({
                     "step": "validate",
                     "status": "running",
-                    "message": f"Checking {len(orchestrator.reasoner.constraints)} constraints...",
+                    "message": f"Checking {len(orchestrator.reasoner.constraints)} constraints + OWL reasoning...",
                     "progress": 40
                 })
             }
 
             consistency = orchestrator.reasoner.check_consistency(raw_values)
+
+            # Include OWL info in validation step
+            owl_info = ""
+            if hasattr(consistency, 'owl_violations_count') and consistency.owl_violations_count > 0:
+                owl_info = f" ({consistency.owl_violations_count} from OWL reasoning)"
 
             if consistency.is_consistent:
                 yield {
@@ -528,7 +533,7 @@ async def validate_text_stream(request: ValidationRequest, session_id: Optional[
                     "data": json.dumps({
                         "step": "validate",
                         "status": "done",
-                        "message": "All constraints satisfied",
+                        "message": "All constraints satisfied (rules + OWL reasoning)",
                         "progress": 90
                     })
                 }
@@ -543,9 +548,9 @@ async def validate_text_stream(request: ValidationRequest, session_id: Optional[
                     "data": json.dumps({
                         "step": "validate",
                         "status": "done",
-                        "message": f"Found {len(consistency.violations)} violation(s)",
+                        "message": f"Found {len(consistency.violations)} violation(s){owl_info}",
                         "progress": 50,
-                        "data": {"violations": violation_msgs}
+                        "data": {"violations": violation_msgs, "owl_violations": consistency.owl_violations_count if hasattr(consistency, 'owl_violations_count') else 0}
                     })
                 }
 
@@ -679,6 +684,123 @@ async def get_constraints():
             for c in constraints
         ]
     }
+
+
+@app.get("/api/owl/status")
+async def get_owl_status():
+    """Get OWL reasoning status and loaded ontology information."""
+    from logic_guard_layer.ontology.loader import get_ontology_loader, load_ontology
+
+    try:
+        loader = load_ontology()
+        concepts = loader.get_concepts() if loader.is_loaded else {}
+        properties = loader.get_properties() if loader.is_loaded else {}
+
+        return {
+            "enabled": True,
+            "loaded": loader.is_loaded,
+            "concepts_count": len(concepts),
+            "properties_count": len(properties),
+            "concepts": list(concepts.keys()),
+            "datatype_properties": [
+                name for name, info in properties.items()
+                if info.get("type") == "datatype"
+            ],
+            "object_properties": [
+                name for name, info in properties.items()
+                if info.get("type") == "object"
+            ],
+        }
+    except Exception as e:
+        logger.error(f"Error getting OWL status: {e}")
+        return {
+            "enabled": True,
+            "loaded": False,
+            "error": str(e),
+            "concepts_count": 0,
+            "properties_count": 0,
+        }
+
+
+@app.get("/api/owl/hierarchy")
+async def get_owl_hierarchy():
+    """Get the OWL class hierarchy for visualization."""
+    from logic_guard_layer.ontology.loader import load_ontology
+
+    try:
+        loader = load_ontology()
+        if not loader.is_loaded:
+            return {"error": "OWL ontology not loaded", "hierarchy": []}
+
+        concepts = loader.get_concepts()
+
+        # Build hierarchy tree
+        def build_tree(class_name: str, visited: set = None) -> dict:
+            if visited is None:
+                visited = set()
+            if class_name in visited:
+                return None
+            visited.add(class_name)
+
+            children = [
+                name for name, parents in concepts.items()
+                if class_name in parents and name not in visited
+            ]
+
+            return {
+                "name": class_name,
+                "children": [
+                    build_tree(child, visited.copy())
+                    for child in sorted(children)
+                    if build_tree(child, visited.copy()) is not None
+                ]
+            }
+
+        # Find root classes (no parents or only Thing as parent)
+        roots = []
+        for name, parents in concepts.items():
+            if not parents or all(p in ["Thing", "owl.Thing"] for p in parents):
+                # Skip violation marker classes for cleaner display
+                if "Violation" not in name:
+                    roots.append(name)
+
+        hierarchy = [build_tree(root) for root in sorted(roots) if build_tree(root)]
+
+        return {
+            "hierarchy": hierarchy,
+            "total_concepts": len(concepts),
+        }
+    except Exception as e:
+        logger.error(f"Error getting OWL hierarchy: {e}")
+        return {"error": str(e), "hierarchy": []}
+
+
+@app.get("/api/owl/properties")
+async def get_owl_properties():
+    """Get OWL datatype properties with their ranges."""
+    from logic_guard_layer.ontology.loader import load_ontology
+
+    try:
+        loader = load_ontology()
+        if not loader.is_loaded:
+            return {"error": "OWL ontology not loaded", "properties": []}
+
+        properties = loader.get_properties()
+
+        # Format properties for display
+        formatted = []
+        for name, info in properties.items():
+            if info.get("type") == "datatype":
+                formatted.append({
+                    "name": name,
+                    "domain": info.get("domain", []),
+                    "range": info.get("range", "unknown"),
+                })
+
+        return {"properties": formatted}
+    except Exception as e:
+        logger.error(f"Error getting OWL properties: {e}")
+        return {"error": str(e), "properties": []}
 
 
 @app.get("/api/ontology")

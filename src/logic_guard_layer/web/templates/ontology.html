@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Logic-Guard-Layer - Ontology{% endblock %}
+{% block title %}Logic-Guard - Ontology{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -18,6 +18,31 @@
         display: flex;
         align-items: center;
         gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    @media (max-width: 600px) {
+        .ontology-controls {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .control-section {
+            width: 100%;
+        }
+
+        .control-section:first-child {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .ontology-select {
+            width: 100%;
+        }
+
+        #btn-activate {
+            width: 100%;
+        }
     }
 
     .control-label {
@@ -147,6 +172,11 @@
         color: #000;
     }
 
+    .badge-owl {
+        background: #00ccff;
+        color: #000;
+    }
+
     .ontology-list {
         margin-top: 1rem;
     }
@@ -208,6 +238,157 @@
         color: var(--terminal-green-dim);
         overflow-x: auto;
     }
+
+    /* OWL Status Panel */
+    .owl-status-panel {
+        margin-bottom: 1.5rem;
+        padding: 1rem;
+        background: rgba(0, 100, 100, 0.2);
+        border: 1px solid #00ccff;
+    }
+
+    .owl-status-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+        color: #00ccff;
+    }
+
+    .owl-status-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+
+    .owl-stat {
+        padding: 0.5rem;
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid #006666;
+    }
+
+    .owl-stat-label {
+        font-size: 0.75rem;
+        color: #00ccff;
+        text-transform: uppercase;
+    }
+
+    .owl-stat-value {
+        font-size: 1.2rem;
+        color: var(--terminal-green);
+        margin-top: 0.25rem;
+    }
+
+    .owl-stat-value.error {
+        color: #ff4444;
+    }
+
+    /* Dynamic hierarchy tree */
+    .owl-hierarchy {
+        margin-top: 1rem;
+    }
+
+    .owl-tree {
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 0.9rem;
+        line-height: 1.6;
+        color: var(--terminal-green);
+    }
+
+    .owl-tree-node {
+        padding-left: 1.5rem;
+        position: relative;
+    }
+
+    .owl-tree-node::before {
+        content: "├── ";
+        position: absolute;
+        left: 0;
+        color: var(--terminal-green-dim);
+    }
+
+    .owl-tree-node:last-child::before {
+        content: "└── ";
+    }
+
+    .owl-tree-root {
+        padding-left: 0;
+    }
+
+    .owl-tree-root::before {
+        content: "";
+    }
+
+    .node-name {
+        color: var(--terminal-green);
+    }
+
+    .node-name.component {
+        color: #00ff41;
+    }
+
+    .node-name.event {
+        color: #ffaa00;
+    }
+
+    .node-name.violation {
+        color: #ff4444;
+    }
+
+    /* Tab navigation */
+    .tab-nav {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        border-bottom: 1px solid var(--terminal-green-dim);
+        padding-bottom: 0.5rem;
+    }
+
+    .tab-btn {
+        background: transparent;
+        color: var(--terminal-green-dim);
+        border: 1px solid transparent;
+        padding: 0.4rem 1rem;
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .tab-btn:hover {
+        color: var(--terminal-green);
+    }
+
+    .tab-btn.active {
+        color: var(--terminal-green);
+        border-color: var(--terminal-green);
+        background: rgba(0, 255, 0, 0.1);
+    }
+
+    .tab-content {
+        display: none;
+    }
+
+    .tab-content.active {
+        display: block;
+    }
+
+    /* Loading indicator */
+    .loading-indicator {
+        color: var(--terminal-green-dim);
+        font-style: italic;
+    }
+
+    .loading-indicator::after {
+        content: "...";
+        animation: dots 1s infinite;
+    }
+
+    @keyframes dots {
+        0%, 20% { content: "."; }
+        40% { content: ".."; }
+        60%, 100% { content: "..."; }
+    }
 </style>
 {% endblock %}
 
@@ -218,6 +399,33 @@
     </div>
 
     <div class="terminal-content">
+        <!-- OWL Status Panel -->
+        <div class="owl-status-panel">
+            <div class="owl-status-header">
+                <span class="prompt">&gt;</span>
+                <span>OWL REASONING ENGINE STATUS</span>
+                <span class="ontology-badge badge-owl">Owlready2</span>
+            </div>
+            <div id="owl-status-grid" class="owl-status-grid">
+                <div class="owl-stat">
+                    <div class="owl-stat-label">Status</div>
+                    <div class="owl-stat-value" id="owl-status">Loading...</div>
+                </div>
+                <div class="owl-stat">
+                    <div class="owl-stat-label">OWL Classes</div>
+                    <div class="owl-stat-value" id="owl-concepts">-</div>
+                </div>
+                <div class="owl-stat">
+                    <div class="owl-stat-label">Datatype Properties</div>
+                    <div class="owl-stat-value" id="owl-dt-props">-</div>
+                </div>
+                <div class="owl-stat">
+                    <div class="owl-stat-label">Object Properties</div>
+                    <div class="owl-stat-value" id="owl-obj-props">-</div>
+                </div>
+            </div>
+        </div>
+
         <!-- Ontology Controls -->
         <div class="ontology-controls">
             <div class="control-section">
@@ -296,101 +504,66 @@
 
         <div class="terminal-divider"></div>
 
-        <h3><span class="prompt">&gt;</span> ACTIVE CONSTRAINTS:</h3>
+        <!-- Tab Navigation -->
+        <div class="tab-nav">
+            <button class="tab-btn active" data-tab="constraints">CONSTRAINTS</button>
+            <button class="tab-btn" data-tab="hierarchy">CLASS HIERARCHY (OWL)</button>
+            <button class="tab-btn" data-tab="properties">PROPERTIES (OWL)</button>
+        </div>
 
-        <div class="constraints-list">
-            {% for c in constraints %}
-            <div class="constraint-card">
-                <div class="constraint-header">
-                    <span class="constraint-id">[{{ c.id }}]</span>
-                    <span class="constraint-name">{{ c.name }}</span>
-                    <span class="constraint-type type-{{ c.type }}">{{ c.type }}</span>
+        <!-- Tab: Constraints -->
+        <div id="tab-constraints" class="tab-content active">
+            <h3><span class="prompt">&gt;</span> ACTIVE CONSTRAINTS:</h3>
+            <div class="constraints-list">
+                {% for c in constraints %}
+                <div class="constraint-card">
+                    <div class="constraint-header">
+                        <span class="constraint-id">[{{ c.id }}]</span>
+                        <span class="constraint-name">{{ c.name }}</span>
+                        <span class="constraint-type type-{{ c.type }}">{{ c.type }}</span>
+                    </div>
+                    <div class="constraint-expression">
+                        <code>{{ c.expression }}</code>
+                    </div>
+                    <div class="constraint-description">
+                        {{ c.description }}
+                    </div>
                 </div>
-                <div class="constraint-expression">
-                    <code>{{ c.expression }}</code>
-                </div>
-                <div class="constraint-description">
-                    {{ c.description }}
-                </div>
+                {% endfor %}
             </div>
-            {% endfor %}
         </div>
 
-        <div class="terminal-divider"></div>
-
-        <h3><span class="prompt">&gt;</span> COMPONENT HIERARCHY:</h3>
-
-        <div class="ontology-tree">
-            <pre>
-Component
-├── RotatingComponent
-│   ├── Motor
-│   │   └── ElectricMotor
-│   └── Pump
-│       ├── HydraulicPump
-│       └── VacuumPump
-├── StaticComponent
-│   ├── Valve
-│   │   ├── ControlValve
-│   │   └── ShutoffValve
-│   └── Container
-└── Sensor
-    ├── PressureSensor
-    └── TemperatureSensor
-            </pre>
+        <!-- Tab: OWL Class Hierarchy -->
+        <div id="tab-hierarchy" class="tab-content">
+            <h3><span class="prompt">&gt;</span> OWL CLASS HIERARCHY:</h3>
+            <p style="color: var(--terminal-green-dim); font-size: 0.85rem; margin-bottom: 1rem;">
+                Dynamic hierarchy from maintenance.owl loaded via Owlready2. Classes with SWRL rules and datatype restrictions for physics-based validation.
+            </p>
+            <div id="owl-hierarchy-container" class="owl-hierarchy">
+                <div class="loading-indicator">Loading OWL hierarchy</div>
+            </div>
         </div>
 
-        <div class="terminal-divider"></div>
-
-        <h3><span class="prompt">&gt;</span> PROPERTY RANGES:</h3>
-
-        <div class="properties-table">
-            <table class="terminal-table">
-                <thead>
-                    <tr>
-                        <th>PROPERTY</th>
-                        <th>TYPE</th>
-                        <th>RANGE</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>operating_hours</td>
-                        <td>integer</td>
-                        <td>&gt;= 0</td>
-                    </tr>
-                    <tr>
-                        <td>max_lifespan</td>
-                        <td>integer</td>
-                        <td>&gt; 0</td>
-                    </tr>
-                    <tr>
-                        <td>maintenance_interval</td>
-                        <td>integer</td>
-                        <td>&gt; 0, &lt;= max_lifespan</td>
-                    </tr>
-                    <tr>
-                        <td>pressure_bar</td>
-                        <td>float</td>
-                        <td>0 - 350</td>
-                    </tr>
-                    <tr>
-                        <td>temperature_c</td>
-                        <td>float</td>
-                        <td>-40 - 150</td>
-                    </tr>
-                    <tr>
-                        <td>rpm</td>
-                        <td>integer</td>
-                        <td>0 - 10000</td>
-                    </tr>
-                    <tr>
-                        <td>status</td>
-                        <td>enum</td>
-                        <td>active, defective, maintenance</td>
-                    </tr>
-                </tbody>
-            </table>
+        <!-- Tab: OWL Properties -->
+        <div id="tab-properties" class="tab-content">
+            <h3><span class="prompt">&gt;</span> OWL DATATYPE PROPERTIES:</h3>
+            <p style="color: var(--terminal-green-dim); font-size: 0.85rem; margin-bottom: 1rem;">
+                Properties defined in OWL with XSD datatype restrictions for automatic range validation.
+            </p>
+            <div class="properties-table">
+                <table class="terminal-table" id="owl-properties-table">
+                    <thead>
+                        <tr>
+                            <th>PROPERTY</th>
+                            <th>DOMAIN</th>
+                            <th>RANGE/TYPE</th>
+                        </tr>
+                    </thead>
+                    <tbody id="owl-properties-body">
+                        <tr><td colspan="3" class="loading-indicator">Loading OWL properties</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
@@ -411,8 +584,161 @@ document.addEventListener('DOMContentLoaded', function() {
     const ontologiesList = document.getElementById('ontologies-list');
     const ontologySchema = document.getElementById('ontology-schema');
 
-    // Load ontologies on page load
+    // Tab navigation
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const tabId = this.dataset.tab;
+
+            // Update button states
+            tabBtns.forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+
+            // Update content visibility
+            tabContents.forEach(content => {
+                content.classList.remove('active');
+                if (content.id === 'tab-' + tabId) {
+                    content.classList.add('active');
+                }
+            });
+
+            // Load OWL data when switching to hierarchy or properties tab
+            if (tabId === 'hierarchy') {
+                loadOWLHierarchy();
+            } else if (tabId === 'properties') {
+                loadOWLProperties();
+            }
+        });
+    });
+
+    // Load initial data
     loadOntologies();
+    loadOWLStatus();
+
+    // Load OWL status
+    async function loadOWLStatus() {
+        try {
+            const response = await fetch('/api/owl/status');
+            const data = await response.json();
+
+            document.getElementById('owl-status').textContent = data.loaded ? 'ACTIVE' : 'INACTIVE';
+            document.getElementById('owl-status').classList.toggle('error', !data.loaded);
+            document.getElementById('owl-concepts').textContent = data.concepts_count || 0;
+            document.getElementById('owl-dt-props').textContent = data.datatype_properties ? data.datatype_properties.length : 0;
+            document.getElementById('owl-obj-props').textContent = data.object_properties ? data.object_properties.length : 0;
+
+            if (data.error) {
+                console.error('OWL error:', data.error);
+            }
+        } catch (error) {
+            console.error('Failed to load OWL status:', error);
+            document.getElementById('owl-status').textContent = 'ERROR';
+            document.getElementById('owl-status').classList.add('error');
+        }
+    }
+
+    // Load OWL class hierarchy
+    async function loadOWLHierarchy() {
+        const container = document.getElementById('owl-hierarchy-container');
+
+        try {
+            const response = await fetch('/api/owl/hierarchy');
+            const data = await response.json();
+
+            if (data.error) {
+                container.innerHTML = `<p style="color: #ff4444;">Error: ${data.error}</p>`;
+                return;
+            }
+
+            if (!data.hierarchy || data.hierarchy.length === 0) {
+                container.innerHTML = '<p style="color: var(--terminal-green-dim);">No hierarchy data available</p>';
+                return;
+            }
+
+            // Build tree HTML
+            function buildTreeHTML(node, isRoot = false) {
+                if (!node) return '';
+
+                // Determine node category for styling
+                let category = 'other';
+                const name = node.name.toLowerCase();
+                if (name.includes('komponente') || name.includes('pumpe') || name.includes('motor') ||
+                    name.includes('ventil') || name.includes('sensor') || name.includes('kompressor') ||
+                    name.includes('turbine') || name.includes('speicher') || name.includes('tauscher')) {
+                    category = 'component';
+                } else if (name.includes('ereignis') || name.includes('event')) {
+                    category = 'event';
+                } else if (name.includes('violation')) {
+                    category = 'violation';
+                }
+
+                let html = `<div class="owl-tree-node ${isRoot ? 'owl-tree-root' : ''}">`;
+                html += `<span class="node-name ${category}">${node.name}</span>`;
+
+                if (node.children && node.children.length > 0) {
+                    html += '<div class="owl-tree-children">';
+                    node.children.forEach(child => {
+                        html += buildTreeHTML(child, false);
+                    });
+                    html += '</div>';
+                }
+
+                html += '</div>';
+                return html;
+            }
+
+            let treeHTML = '<div class="owl-tree">';
+            data.hierarchy.forEach(root => {
+                treeHTML += buildTreeHTML(root, true);
+            });
+            treeHTML += '</div>';
+            treeHTML += `<p style="color: var(--terminal-green-dim); font-size: 0.8rem; margin-top: 1rem;">Total: ${data.total_concepts} classes defined in OWL</p>`;
+
+            container.innerHTML = treeHTML;
+
+        } catch (error) {
+            console.error('Failed to load OWL hierarchy:', error);
+            container.innerHTML = `<p style="color: #ff4444;">Failed to load hierarchy: ${error.message}</p>`;
+        }
+    }
+
+    // Load OWL properties
+    async function loadOWLProperties() {
+        const tbody = document.getElementById('owl-properties-body');
+
+        try {
+            const response = await fetch('/api/owl/properties');
+            const data = await response.json();
+
+            if (data.error) {
+                tbody.innerHTML = `<tr><td colspan="3" style="color: #ff4444;">Error: ${data.error}</td></tr>`;
+                return;
+            }
+
+            if (!data.properties || data.properties.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" style="color: var(--terminal-green-dim);">No properties available</td></tr>';
+                return;
+            }
+
+            let html = '';
+            data.properties.forEach(prop => {
+                const domain = prop.domain && prop.domain.length > 0 ? prop.domain.join(', ') : 'Any';
+                html += `<tr>
+                    <td>${prop.name}</td>
+                    <td>${domain}</td>
+                    <td>${prop.range}</td>
+                </tr>`;
+            });
+
+            tbody.innerHTML = html;
+
+        } catch (error) {
+            console.error('Failed to load OWL properties:', error);
+            tbody.innerHTML = `<tr><td colspan="3" style="color: #ff4444;">Failed to load: ${error.message}</td></tr>`;
+        }
+    }
 
     // Load sample ontology
     btnLoadSample.addEventListener('click', async function() {
@@ -446,7 +772,10 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Refresh ontologies list
-    btnRefresh.addEventListener('click', loadOntologies);
+    btnRefresh.addEventListener('click', function() {
+        loadOntologies();
+        loadOWLStatus();
+    });
 
     // Activate ontology
     btnActivate.addEventListener('click', async function() {
